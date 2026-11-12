@@ -139,6 +139,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.9.1 | Következő feladatok sáv: a határidő-címke a szöveg fölött, hosszú szöveg két sorra vágva (teljes szöveg a súgóban) |
 | 2.9.0 | Live Desk: munkaidő-mérés (`munkamenetek.csv`), élő sáv, alvás/óraugrás-ellenőrzés, mért idő a statisztikában |
 | 2.8.0 | Előzmények: `tortenet.csv`, feladatonkénti idővonal és napi napló |
 | 2.7.0 | Moduláris forrás (`src/`), egyfájlos build (esbuild); a működés változatlan |

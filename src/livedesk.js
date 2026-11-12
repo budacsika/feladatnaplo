@@ -34,7 +34,7 @@ export function nextTasks(now = Date.now(), activeId = null){
 export function nextRow({ t, di }){
   const chip = di ? `<span class="chip dl ${di.state}" style="grid-area:auto">${ICON_CLOCK}${esc(di.label)}</span>` : `<span class="chip dl none" style="grid-area:auto">${esc(mdShort(t.datum))}</span>`;
   return `<div class="alr"><button type="button" class="go" data-live="start" data-id="${esc(t.id)}" title="Munka indítása" aria-label="Munka indítása">${ICON_PLAY}</button>`
-    + `<button type="button" class="al ${di ? di.state : 'none'}" data-goto="${esc(t.id)}">${chip}<span class="at">${esc(shortText(t))}</span></button></div>`;
+    + `<button type="button" class="al ${di ? di.state : 'none'}" data-goto="${esc(t.id)}" title="${esc(t.feladat)}">${chip}<span class="at">${esc(shortText(t))}</span></button></div>`;
 }
 
 // a napi sáv alatti sor: aktív feladat vagy „nincs aktív feladat"
