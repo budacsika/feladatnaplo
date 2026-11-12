@@ -10,7 +10,7 @@ import { moveFromPark, sendToPark, setPark, setParkOpen } from './park.js';
 import { addPerson, removePerson, renamePerson, renderPeople } from './people.js';
 import { exactPerson, normName, pkey, reconcilePeople, suggestPeople } from './people-model.js';
 import { setJournal, setJournalDay, shiftJournal } from './journal.js';
-import { finishActive, pauseActive, startWorkOn } from './work.js';
+import { finishActive, pauseActive, resolveGap, startWorkOn } from './work.js';
 import { flash, render } from './render.js';
 import { $, LS_DASH, LS_PARK, LS_PPL, isDone, ov, st, ui } from './state.js';
 import { toast } from './status.js';
@@ -57,7 +57,7 @@ $('#today').addEventListener('click', e => {
   const j = e.target.closest('[data-jump]');
   if (j) { if (j.dataset.jump === 'park' && !ov.park) setParkOpen(true); const el = document.getElementById(j.dataset.jump); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
   const lv = e.target.closest('[data-live]');
-  if (lv) { const a = lv.dataset.live; if (a === 'start') startWorkOn(lv.dataset.id); else if (a === 'pause') pauseActive(); else if (a === 'finish') finishActive(); return; }
+  if (lv) { const a = lv.dataset.live; if (a === 'start') startWorkOn(lv.dataset.id); else if (a === 'pause') pauseActive(); else if (a === 'finish') finishActive(); else if (a === 'gap-keep') resolveGap('keep'); else if (a === 'gap-resume') resolveGap('resume'); else if (a === 'gap-stop') resolveGap('stop', ($('#ldGapAt') || {}).value); return; }
   const g = e.target.closest('[data-goto]');
   if (g) { resetFilters(); st.editing = null; renderList(); flash(g.dataset.goto); }
 });
@@ -189,8 +189,8 @@ window.addEventListener('beforeprint', () => {
 
 const onFocus = () => {
   if (!st.dateTouched) $('#fDate').value = todayStr();
-  checkExternal();
+  checkExternal(); tick();
 };
 window.addEventListener('focus', onFocus);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); else { onFocus(); tick(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); else onFocus(); });
 window.addEventListener('beforeunload', e => { if (st.dirty || st.saving) { e.preventDefault(); e.returnValue = ''; } });

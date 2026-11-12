@@ -1,7 +1,7 @@
 // Live Desk: aktív munka sáv, mért idő, következő feladatok (a napi státuszsávban)
 import { $, ICON_CLOCK, ICON_PAUSE, ICON_PLAY, ICON_USER, esc, isDone, live, st } from './state.js';
 import { TAG_RE, dueInfo, isParked } from './tasks.js';
-import { todayStr } from './util.js';
+import { stampAt, toMs, todayStr } from './util.js';
 import { activeOf, capOf, durMs, fmtHMS, fmtWork, workMsOfTask, workMsOn } from './worktime.js';
 
 const shortText = t => t.feladat.replace(TAG_RE, '').trim() || t.feladat;
@@ -12,7 +12,7 @@ export const todayWorkMs = (now = Date.now()) => workMsOn(st.sessions, todayStr(
 
 // az utoljára dolgozott, még nyitott feladat (a „Folytatás" gombhoz)
 export function lastWorked(){
-  const done = st.sessions.filter(s => s.veg).sort((a, b) => (a.veg < b.veg ? 1 : a.veg > b.veg ? -1 : 0));
+  const done = st.sessions.filter(s => s.veg).sort((a, b) => (a.veg < b.veg ? 1 : a.veg > b.veg ? -1 : a.kezdet < b.kezdet ? 1 : a.kezdet > b.kezdet ? -1 : 0));   // azonos másodperces vég: a később indult az újabb
   for (const s of done) { const t = st.tasks.find(x => x.id === s.feladat_id); if (t && !isDone(t) && !isParked(t)) return t; }
   return null;
 }
@@ -54,7 +54,23 @@ export function liveBar(now = Date.now()){
     + (di ? `<span class="chip dl ${di.state}" style="grid-area:auto" title="Határidő: ${esc(t.hatarido.replace('T', ' '))}">${ICON_CLOCK}${esc(di.label)}</span>` : '')
     + `<span class="ld-sum" title="A feladatra összesen fordított idő (az összes munkamenet)">Σ <b class="mono" id="ldTotal">${tot}</b></span>`
     + `<span class="ld-act"><button type="button" class="mini" data-live="pause" title="Szüneteltetés: a munkamenet lezárul, a feladat nyitott marad">${ICON_PAUSE} Szünet</button>`
-    + `<button type="button" class="mini ok" data-live="finish" title="Befejezés: a feladat kész lesz, a mért idő megmarad">✓ Kész</button></span></div>`;
+    + `<button type="button" class="mini ok" data-live="finish" title="Befejezés: a feladat kész lesz, a mért idő megmarad">✓ Kész</button></span></div>`
+    + (live.gap ? gapPanel(a, now) : '');
+}
+
+const hm = ms => stampAt(ms).slice(11, 16);
+// alvás / óraváltozás után: a mért idő addig csak az ismert pillanatig számít, a felhasználó dönti el, mi történt
+function gapPanel(a, now){
+  const g = live.gap, clock = g.kind === 'clock', cap = capOf(g);
+  const msg = clock
+    ? `Az óra megváltozott (${hm(g.fromMs)} → ${hm(g.toMs)}), ezért a mért idő nem megbízható. Eddig ${fmtWork(durMs(a, now, cap))} számít.`
+    : `Nem érkezett jel ${fmtWork(g.toMs - g.fromMs)} ideje (${hm(g.fromMs)} óta – alvás, zárolás vagy bezárt fül). Dolgoztál közben? Egyelőre ${fmtWork(durMs(a, now, cap))} számít.`;
+  const lo = toMs(a.kezdet), hi = Math.max(now, lo), val = stampAt(Math.min(Math.max(g.fromMs, lo), hi)).slice(0, 16), min = a.kezdet.slice(0, 16), max = stampAt(hi).slice(0, 16);
+  return `<div class="ld-gap" role="alert"><span class="ld-gap-t">${esc(msg)}</span><div class="ld-gap-act">`
+    + (clock ? '' : `<button type="button" class="mini ok" data-live="gap-keep">Végig dolgoztam</button>`)
+    + `<button type="button" class="mini" data-live="gap-resume" title="A kihagyott időt nem számoljuk; új munkamenet indul most">Szünet volt – folytatom most</button>`
+    + `<label class="ld-gap-at">Leállítás itt: <input type="datetime-local" id="ldGapAt" value="${val}" min="${min}" max="${max}"></label>`
+    + `<button type="button" class="mini" data-live="gap-stop">Leállítás</button></div></div>`;
 }
 
 // másodpercenként: csak a számlálók szövege frissül (a teljes újrarajzolás percenként van)

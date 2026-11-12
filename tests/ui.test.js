@@ -489,6 +489,69 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert((await page.$eval('#today .ld', e => e.textContent)).includes('LD teszt A'), 'frissítés után is az aktív feladat látszik');
   assert.strictEqual(await page.$$eval('#list .task.working', e => e.length), 1);
 
+  // 14) Alvás és óraváltozás: a mért idő nem nő hamisan, a felhasználó dönt (a vezérelt órával: window.__skew)
+  const lsSess = () => page.evaluate(() => localStorage.getItem('feladatnaplo.v1.sessions') || '');
+  const jump = ms => page.evaluate(d => { window.__skew = (window.__skew || 0) + d; }, ms);
+  await jump(40 * 60e3);                                                         // 40 perc „alvás"
+  await page.waitForSelector('#today .ld-gap', { timeout: 4000 });
+  assert((await page.$eval('#today .ld-gap', e => e.textContent)).includes('Nem érkezett jel'), 'alvás után ellenőrző kérdés');
+  assert(/^00:0\d:/.test(await page.$eval('#ldSess', e => e.textContent)), 'a kihagyott 40 perc nem számít bele: ' + await page.$eval('#ldSess', e => e.textContent));
+  await sleep(1300);
+  assert(/^00:0\d:/.test(await page.$eval('#ldSess', e => e.textContent)), 'a kérdés alatt a számláló áll (nem szalad tovább)');
+  assert.strictEqual(await page.$$eval('#today .ld-gap', e => e.length), 1, 'egyetlen ellenőrző panel');
+  await (await page.$('#today')).screenshot({ path: path.resolve(OUT, 'shot-livedesk-gap.png') });
+  await page.click('#today [data-live="gap-resume"]');                           // „Szünet volt – folytatom most"
+  await page.waitForFunction(() => !document.querySelector('#today .ld-gap'));
+  let ls = await lsSess();
+  assert(/;szunet/.test(ls), 'a kihagyás előtti rész szunet okkal lezárva: ' + ls);
+  assert.strictEqual((ls.match(/;;;\r?\n/g) || []).length, 1, 'a folytatás új nyitott munkamenet');
+  assert(/^00:00:/.test(await page.$eval('#ldSess', e => e.textContent)), 'az új munkamenet nulláról indul');
+  await sleep(1200);
+  await jump(30 * 60e3);                                                         // újabb 30 perc: ezúttal végig dolgozott
+  await page.waitForSelector('#today .ld-gap', { timeout: 4000 });
+  await page.click('#today [data-live="gap-keep"]');
+  await page.waitForFunction(() => !document.querySelector('#today .ld-gap'));
+  await sleep(1200);
+  assert(/^00:(29|3\d):/.test(await page.$eval('#ldSess', e => e.textContent)), '„Végig dolgoztam": az idő megmarad: ' + await page.$eval('#ldSess', e => e.textContent));
+  await jump(90 * 60e3);                                                         // 90 perc: leállítás a kihagyás elején
+  await page.waitForSelector('#today .ld-gap', { timeout: 4000 });
+  await page.click('#today [data-live="gap-stop"]');                             // az alapérték az utolsó ismert pillanat
+  await page.waitForSelector('#today .ld.off');
+  ls = await lsSess();
+  const rows = ls.trim().split(/\r?\n/).slice(1).map(r => r.split(';')), last = rows.filter(r => r[1] === idA && r[3]).pop();
+  assert(last && last[5] === 'szunet' && Number(last[4]) > 29 * 60 && Number(last[4]) < 32 * 60, 'leállítás az ismert pillanatnál (~30 perc, nem 2 óra): ' + JSON.stringify(last));
+  assert.strictEqual((ls.match(/;;;\r?\n/g) || []).length, 0, 'nincs nyitott munkamenet');
+  // az óra visszaugrik: „clock" kérdés, nincs „Végig dolgoztam"
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idA);
+  await page.waitForSelector('#today .ld.on');
+  await sleep(1200);
+  await jump(-3 * 3600e3);
+  await page.waitForSelector('#today .ld-gap', { timeout: 4000 });
+  assert((await page.$eval('#today .ld-gap', e => e.textContent)).includes('Az óra megváltozott'), 'óraváltozás kérdés');
+  assert.strictEqual(await page.$('#today [data-live="gap-keep"]'), null, 'óraugrásnál nincs „Végig dolgoztam"');
+  await page.click('#today [data-live="gap-resume"]');
+  await page.waitForFunction(() => !document.querySelector('#today .ld-gap'));
+  assert.strictEqual(await page.$$eval('#today .ld.on', e => e.length), 1, 'a munka az óraugrás után is egy aktív munkamenet');
+  assert((await lsSess()).split(/\r?\n/).every(r => !/;-\d/.test(r)), 'nincs negatív időtartam');
+  // az újratöltés a vezérelt óra eltolását is nullázza: előbb rendezzük (ez maga is egy óraugrás)
+  await page.evaluate(() => { window.__skew = 0; });
+  await page.waitForSelector('#today .ld-gap', { timeout: 4000 });
+  await page.click('#today [data-live="gap-resume"]');
+  await page.waitForFunction(() => !document.querySelector('#today .ld-gap'));
+  // frissítés: rövid kihagyás nem kérdez, a hosszú igen
+  await sleep(1200);
+  await page.reload();
+  await page.waitForSelector('#today .ld.on', { timeout: 4000 });
+  assert.strictEqual(await page.$('#today .ld-gap'), null, 'rövid kihagyás (frissítés) nem kérdez');
+  await jump(60 * 60e3);
+  await page.waitForSelector('#today .ld-gap', { timeout: 4000 });
+  await page.click('#today [data-live="finish"]');                               // a kérdés mellett is lehet befejezni: csak az ismert idő számít
+  await page.waitForSelector('#today .ld.off');
+  assert.strictEqual(await page.$('#today .ld-gap'), null, 'befejezés után nincs ellenőrző panel');
+  ls = await lsSess();
+  const k = ls.trim().split(/\r?\n/).slice(1).map(r => r.split(';')).filter(r => r[5] === 'kesz').pop();
+  assert(k && Number(k[4]) < 60, 'befejezés a kérdés mellett: a kihagyott óra nem számít: ' + JSON.stringify(k));
+
   assert.deepStrictEqual(errors, [], 'nincs JS hiba: ' + errors.join(' | '));
   console.log('UI teszt rendben ✔');
   await browser.close();

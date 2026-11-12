@@ -342,7 +342,12 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .task.working{box-shadow:inset 3px 0 0 var(--cyan);background:linear-gradient(90deg,rgba(53,224,255,.14),transparent 60%)}
 .chip.wk{margin-left:8px;color:var(--cyan);border-color:rgba(53,224,255,.55);background:rgba(53,224,255,.1);font-family:var(--mono)}
 .icon.go-b{color:var(--cyan)}
-@media (max-width:620px){ .ld-t{font-size:18px} .ld-act{width:100%;margin-left:0} .ld-act .mini{flex:1} .ld-go{margin-left:0;width:100%} }
+.ld-gap{margin-top:8px;padding:9px 11px;border:1px solid rgba(255,194,51,.6);border-radius:3px;background:rgba(255,194,51,.07);display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px}
+.ld-gap-t{flex:1 1 320px;color:var(--gold)}
+.ld-gap-act{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.ld-gap-at{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.ld-gap-at input{font:12px var(--mono);color:var(--ink);background:rgba(2,10,16,.6);border:1px solid var(--line);border-radius:3px;padding:4px 6px}
+@media (max-width:620px){ .ld-gap-act{width:100%} .ld-gap-act .mini{flex:1 1 100%} .ld-t{font-size:18px} .ld-act{width:100%;margin-left:0} .ld-act .mini{flex:1} .ld-go{margin-left:0;width:100%} }
 
 /* előzmények (feladatonként) és napló */
 .acts{grid-area:edit;display:flex;gap:2px;align-items:flex-start}

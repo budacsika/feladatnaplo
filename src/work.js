@@ -5,8 +5,9 @@ import { LS_HB, isDone, live, st } from './state.js';
 import { toast } from './status.js';
 import { queueSave, syncSessions } from './storage.js';
 import { isParked } from './tasks.js';
-import { activeOf, capOf, durMs, fmtWork, isActive, pauseWork, startWork, stopForTask, workMsOfTask } from './worktime.js';
+import { activeOf, capOf, closeSession, durMs, fmtWork, gapCheck, isActive, pauseWork, startWork, stopForTask, workMsOfTask } from './worktime.js';
 import { clip } from './history.js';
+import { stampAt, toMs } from './util.js';
 
 /* ---------- szívverés: az utolsó pillanat, amikor a program biztosan élt (alvás- és óraváltozás-észleléshez) ---------- */
 export const getHb = () => { try { return Number(localStorage.getItem(LS_HB)) || 0; } catch { return 0; } };
@@ -54,4 +55,43 @@ export async function finishActive(){
   live.gap = null;
   updateTask(id, { statusz: 'kesz' });
   toast(`Kész · ${nameOf(id)} · ráfordítás: ${fmtWork(workMsOfTask(st.sessions, id, Date.now()))}`);
+}
+
+/* ---------- alvás / óraváltozás: figyelés és feloldás ---------- */
+let hbAt = 0;
+// másodpercenként (clock.js): előbb ellenőrzünk, csak utána frissítjük a szívverést – így a kimaradás nem íródik felül
+export function liveWatch(now){
+  const a = activeOf(st.sessions);
+  if (!a) { if (live.gap) { live.gap = null; render(); } return; }
+  if (live.gap) { if (live.gap.id !== a.id) { live.gap = null; render(); } return; }      // függő kérdés: a szívverés áll
+  const g = gapCheck(a, getHb(), now);
+  if (g) { live.gap = { ...g, id: a.id }; render(); return; }
+  if (now - hbAt >= 5000 || now < hbAt) { setHb(now); hbAt = now; }
+}
+
+// how: 'keep' (végig dolgoztam), 'resume' (szünet volt, most folytatom), 'stop' (leállítás a megadott időpontban)
+export function resolveGap(how, at){
+  const g = live.gap, a = activeOf(st.sessions);
+  if (!g || !a) { live.gap = null; render(); return; }
+  const now = Date.now(), lo = toMs(a.kezdet), hi = Math.max(now, lo);
+  const from = Math.min(Math.max(g.fromMs, lo), hi);                                  // az utolsó biztosan ismert pillanat, a munkamenet határai közé szorítva
+  if (how === 'keep') {
+    if (g.kind === 'clock') return;
+    live.gap = null; setHb(now); hbAt = now; render(); return;
+  }
+  if (how === 'resume') {
+    const id = a.feladat_id;
+    closeSession(a, from, 'szunet'); startWork(st.sessions, id, now);                       // a régi nulla hosszú is lehet (ha az óra a kezdet elé ugrott): az újat mindig "most" indítja
+    live.gap = null; setHb(now); hbAt = now;
+    queueSave('s'); render(); toast('Szünet rögzítve, a munka most folytatódik.'); return;
+  }
+  if (how === 'stop') {
+    let end = toMs(at);
+    if (!isNaN(end) && end < lo && lo - end < 60e3) end = lo;                            // a percre kerekített mező a másodperces kezdet alá csúszhat
+    if (isNaN(end)) { toast('Adj meg érvényes időpontot.'); return; }
+    if (end < lo || end > hi + 60e3) { toast(`Az időpont a munkamenet kezdete (${a.kezdet.replace('T', ' ').slice(0, 16)}) és most között legyen.`); return; }
+    closeSession(a, Math.min(end, hi), 'szunet');
+    live.gap = null; queueSave('s'); render();
+    toast(`Leállítva ${stampAt(Math.min(end, hi)).replace('T', ' ').slice(0, 16)}-kor · ${fmtWork(workMsOfTask(st.sessions, a.feladat_id, now))} összesen`);
+  }
 }

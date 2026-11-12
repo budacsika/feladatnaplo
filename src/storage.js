@@ -181,6 +181,7 @@ export async function flush(){
       if (st.dirtyS) {                                                      // munkamenetek: lezárt sor erősebb a nyitottnál; két nyitott közül a későbbi marad aktív
         let changed = false;
         await flushAux('S', raw => { const p = parseSessions(raw); if (!p.blocked && mergeSessions(st.sessions, p.sessions)) changed = true; }, () => sessionsToCSV(st.sessions));
+        announceSessions();                                                 // a többi fül azonnal átveszi (BroadcastChannel; hiánya nem baj, fókuszkor úgyis egyesít)
         if (changed) render();
       }
       if (st.dirty) {
@@ -203,6 +204,14 @@ export async function flush(){
     else st.retryTimer = setTimeout(flush, 15000);
   } finally { st.saving = false; renderStatus(); }
 }
+
+// több fül: ha az egyik fül munkamenetet írt a fájlba, a többi egyesít és újrarajzol (hogy két fülön ne fusson két aktív munka)
+let bc = null;
+try {
+  bc = typeof BroadcastChannel === 'function' ? new BroadcastChannel('feladatnaplo-live') : null;
+  if (bc) bc.onmessage = async () => { if (await syncSessions()) render(); };
+} catch { bc = null; }
+function announceSessions(){ try { if (bc) bc.postMessage(Date.now()); } catch {} }
 
 // Munkamenet-művelet előtt: ha egy másik fül/gép közben írt a fájlba, előbb egyesítünk (hogy ne régi nézetből dolgozzunk)
 export async function syncSessions(){

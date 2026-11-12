@@ -1,8 +1,8 @@
 // Napi sáv, heti/havi irányítópult és diagramok
-import { $, ICON_CLOCK, esc, isDone, ov, st } from './state.js';
+import { $, esc, isDone, ov, st } from './state.js';
 import { liveBar, nextRow, nextTasks, todayWorkMs } from './livedesk.js';
 import { periodStats } from './stats.js';
-import { TAG_RE, dueInfo, isParked } from './tasks.js';
+import { dueInfo, isParked } from './tasks.js';
 import { fmtDur, isoWeek, monthDays, todayStr, weekDays } from './util.js';
 import { activeOf, fmtWork } from './worktime.js';
 

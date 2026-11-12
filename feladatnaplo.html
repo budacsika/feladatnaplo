@@ -349,7 +349,12 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .task.working{box-shadow:inset 3px 0 0 var(--cyan);background:linear-gradient(90deg,rgba(53,224,255,.14),transparent 60%)}
 .chip.wk{margin-left:8px;color:var(--cyan);border-color:rgba(53,224,255,.55);background:rgba(53,224,255,.1);font-family:var(--mono)}
 .icon.go-b{color:var(--cyan)}
-@media (max-width:620px){ .ld-t{font-size:18px} .ld-act{width:100%;margin-left:0} .ld-act .mini{flex:1} .ld-go{margin-left:0;width:100%} }
+.ld-gap{margin-top:8px;padding:9px 11px;border:1px solid rgba(255,194,51,.6);border-radius:3px;background:rgba(255,194,51,.07);display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px}
+.ld-gap-t{flex:1 1 320px;color:var(--gold)}
+.ld-gap-act{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center}
+.ld-gap-at{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.ld-gap-at input{font:12px var(--mono);color:var(--ink);background:rgba(2,10,16,.6);border:1px solid var(--line);border-radius:3px;padding:4px 6px}
+@media (max-width:620px){ .ld-gap-act{width:100%} .ld-gap-act .mini{flex:1 1 100%} .ld-t{font-size:18px} .ld-act{width:100%;margin-left:0} .ld-act .mini{flex:1} .ld-go{margin-left:0;width:100%} }
 
 /* előzmények (feladatonként) és napló */
 .acts{grid-area:edit;display:flex;gap:2px;align-items:flex-start}
@@ -705,7 +710,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     let due = toMs(t.hatarido);
     if (isNaN(due)) return null;
     if (!hasTime) due += 86399999;
-    const dday = t.hatarido.slice(0, 10), hm = t.hatarido.slice(11, 16), md = dday.slice(5).replace("-", ".") + ".";
+    const dday = t.hatarido.slice(0, 10), hm2 = t.hatarido.slice(11, 16), md = dday.slice(5).replace("-", ".") + ".";
     const today = dstr(new Date(now));
     const tm = new Date(now);
     tm.setDate(tm.getDate() + 1);
@@ -713,7 +718,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     let state, label;
     if (t.statusz === "kesz") {
       state = "done";
-      label = hasTime ? `${md} ${hm}` : md;
+      label = hasTime ? `${md} ${hm2}` : md;
     } else if (diff < 0) {
       state = "over";
       label = "lej\xE1rt \xB7 " + fmtAgo(-diff);
@@ -725,13 +730,13 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       label = fmtLeft(diff) + " m\xFAlva";
     } else if (dday === today) {
       state = "today";
-      label = hasTime ? "ma " + hm : "ma";
+      label = hasTime ? "ma " + hm2 : "ma";
     } else if (dday === dstr(tm)) {
       state = "soon";
-      label = hasTime ? "holnap " + hm : "holnap";
+      label = hasTime ? "holnap " + hm2 : "holnap";
     } else {
       state = "later";
-      label = hasTime ? `${md} ${hm}` : md;
+      label = hasTime ? `${md} ${hm2}` : md;
     }
     return { state, label, due, diff, hasTime };
   }
@@ -1104,6 +1109,16 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     for (let i = 0; i < act.length - 1; i++) closeSession(act[i], startMs(act[i + 1]), "valtas");
     return Math.max(0, act.length - 1);
   }
+  function gapCheck(active, hbMs, nowMs, thr = SLEEP_MS) {
+    if (!active) return null;
+    const a = startMs(active);
+    if (isNaN(a)) return null;
+    if (nowMs < a - 6e4) return { kind: "clock", fromMs: a, toMs: nowMs };
+    const hb = Math.max(a, Number.isFinite(hbMs) && hbMs > 0 ? hbMs : a);
+    if (nowMs < hb - 6e4) return { kind: "clock", fromMs: hb, toMs: nowMs };
+    if (nowMs - hb > thr) return { kind: "sleep", fromMs: hb, toMs: nowMs };
+    return null;
+  }
   var capOf = (gap) => gap ? Math.min(gap.fromMs, gap.toMs) : Infinity;
   function sessionsToCSV(list) {
     const lines = [SESS_HEADER.join(";")];
@@ -1202,7 +1217,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   var mdShort = (ds) => ds === todayStr() ? "ma" : ds.slice(5).replace("-", ".") + ".";
   var todayWorkMs = (now = Date.now()) => workMsOn(st.sessions, todayStr(), now, capOf(live.gap));
   function lastWorked() {
-    const done = st.sessions.filter((s) => s.veg).sort((a, b) => a.veg < b.veg ? 1 : a.veg > b.veg ? -1 : 0);
+    const done = st.sessions.filter((s) => s.veg).sort((a, b) => a.veg < b.veg ? 1 : a.veg > b.veg ? -1 : a.kezdet < b.kezdet ? 1 : a.kezdet > b.kezdet ? -1 : 0);
     for (const s of done) {
       const t = st.tasks.find((x) => x.id === s.feladat_id);
       if (t && !isDone(t) && !isParked(t)) return t;
@@ -1230,7 +1245,14 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     }
     const t = st.tasks.find((x) => x.id === a.feladat_id), di = t ? dueInfo(t, now) : null;
     const sess = fmtHMS(durMs(a, now, cap)), tot = fmtWork(workMsOfTask(st.sessions, a.feladat_id, now, cap));
-    return `<div class="ld on${live.gap ? " hold" : ""}"><i class="ld-dot"></i><span class="ld-tag">Akt\xEDv</span><b class="ld-t mono" id="ldSess" title="Az aktu\xE1lis munkamenet ideje">${sess}</b><span class="ld-name" title="${esc(t ? t.feladat : "")}">${esc(t ? shortText(t) : "(t\xF6r\xF6lt feladat)")}</span>` + (t && t.megbizo ? `<span class="chip who" style="grid-area:auto">${ICON_USER}${esc(t.megbizo)}</span>` : "") + (di ? `<span class="chip dl ${di.state}" style="grid-area:auto" title="Hat\xE1rid\u0151: ${esc(t.hatarido.replace("T", " "))}">${ICON_CLOCK}${esc(di.label)}</span>` : "") + `<span class="ld-sum" title="A feladatra \xF6sszesen ford\xEDtott id\u0151 (az \xF6sszes munkamenet)">\u03A3 <b class="mono" id="ldTotal">${tot}</b></span><span class="ld-act"><button type="button" class="mini" data-live="pause" title="Sz\xFCneteltet\xE9s: a munkamenet lez\xE1rul, a feladat nyitott marad">${ICON_PAUSE} Sz\xFCnet</button><button type="button" class="mini ok" data-live="finish" title="Befejez\xE9s: a feladat k\xE9sz lesz, a m\xE9rt id\u0151 megmarad">\u2713 K\xE9sz</button></span></div>`;
+    return `<div class="ld on${live.gap ? " hold" : ""}"><i class="ld-dot"></i><span class="ld-tag">Akt\xEDv</span><b class="ld-t mono" id="ldSess" title="Az aktu\xE1lis munkamenet ideje">${sess}</b><span class="ld-name" title="${esc(t ? t.feladat : "")}">${esc(t ? shortText(t) : "(t\xF6r\xF6lt feladat)")}</span>` + (t && t.megbizo ? `<span class="chip who" style="grid-area:auto">${ICON_USER}${esc(t.megbizo)}</span>` : "") + (di ? `<span class="chip dl ${di.state}" style="grid-area:auto" title="Hat\xE1rid\u0151: ${esc(t.hatarido.replace("T", " "))}">${ICON_CLOCK}${esc(di.label)}</span>` : "") + `<span class="ld-sum" title="A feladatra \xF6sszesen ford\xEDtott id\u0151 (az \xF6sszes munkamenet)">\u03A3 <b class="mono" id="ldTotal">${tot}</b></span><span class="ld-act"><button type="button" class="mini" data-live="pause" title="Sz\xFCneteltet\xE9s: a munkamenet lez\xE1rul, a feladat nyitott marad">${ICON_PAUSE} Sz\xFCnet</button><button type="button" class="mini ok" data-live="finish" title="Befejez\xE9s: a feladat k\xE9sz lesz, a m\xE9rt id\u0151 megmarad">\u2713 K\xE9sz</button></span></div>` + (live.gap ? gapPanel(a, now) : "");
+  }
+  var hm = (ms) => stampAt(ms).slice(11, 16);
+  function gapPanel(a, now) {
+    const g = live.gap, clock = g.kind === "clock", cap = capOf(g);
+    const msg = clock ? `Az \xF3ra megv\xE1ltozott (${hm(g.fromMs)} \u2192 ${hm(g.toMs)}), ez\xE9rt a m\xE9rt id\u0151 nem megb\xEDzhat\xF3. Eddig ${fmtWork(durMs(a, now, cap))} sz\xE1m\xEDt.` : `Nem \xE9rkezett jel ${fmtWork(g.toMs - g.fromMs)} ideje (${hm(g.fromMs)} \xF3ta \u2013 alv\xE1s, z\xE1rol\xE1s vagy bez\xE1rt f\xFCl). Dolgozt\xE1l k\xF6zben? Egyel\u0151re ${fmtWork(durMs(a, now, cap))} sz\xE1m\xEDt.`;
+    const lo = toMs(a.kezdet), hi = Math.max(now, lo), val = stampAt(Math.min(Math.max(g.fromMs, lo), hi)).slice(0, 16), min = a.kezdet.slice(0, 16), max = stampAt(hi).slice(0, 16);
+    return `<div class="ld-gap" role="alert"><span class="ld-gap-t">${esc(msg)}</span><div class="ld-gap-act">` + (clock ? "" : `<button type="button" class="mini ok" data-live="gap-keep">V\xE9gig dolgoztam</button>`) + `<button type="button" class="mini" data-live="gap-resume" title="A kihagyott id\u0151t nem sz\xE1moljuk; \xFAj munkamenet indul most">Sz\xFCnet volt \u2013 folytatom most</button><label class="ld-gap-at">Le\xE1ll\xEDt\xE1s itt: <input type="datetime-local" id="ldGapAt" value="${val}" min="${min}" max="${max}"></label><button type="button" class="mini" data-live="gap-stop">Le\xE1ll\xEDt\xE1s</button></div></div>`;
   }
   function updateLive(now = Date.now()) {
     const a = activeOf(st.sessions), cap = capOf(live.gap);
@@ -1946,6 +1968,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
             const p = parseSessions(raw);
             if (!p.blocked && mergeSessions(st.sessions, p.sessions)) changed = true;
           }, () => sessionsToCSV(st.sessions));
+          announceSessions();
           if (changed) render();
         }
         if (st.dirty) {
@@ -1980,6 +2003,21 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     } finally {
       st.saving = false;
       renderStatus();
+    }
+  }
+  var bc = null;
+  try {
+    bc = typeof BroadcastChannel === "function" ? new BroadcastChannel("feladatnaplo-live") : null;
+    if (bc) bc.onmessage = async () => {
+      if (await syncSessions()) render();
+    };
+  } catch {
+    bc = null;
+  }
+  function announceSessions() {
+    try {
+      if (bc) bc.postMessage(Date.now());
+    } catch {
     }
   }
   async function syncSessions() {
@@ -2411,17 +2449,172 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     return m;
   };
 
+  // src/work.js
+  var getHb = () => {
+    try {
+      return Number(localStorage.getItem(LS_HB)) || 0;
+    } catch {
+      return 0;
+    }
+  };
+  var setHb = (ms) => {
+    try {
+      localStorage.setItem(LS_HB, String(ms));
+    } catch {
+    }
+  };
+  var nameOf = (id) => {
+    const t = st.tasks.find((x) => x.id === id);
+    return t ? clip(t.feladat.replace(/\s+/g, " "), 50) : "(t\xF6r\xF6lt feladat)";
+  };
+  async function startWorkOn(id) {
+    const t = st.tasks.find((x) => x.id === id);
+    if (!t || isDone(t) || isParked(t)) {
+      toast("Csak nyitott, \xFCtemezett feladaton ind\xEDthat\xF3 munka.");
+      return;
+    }
+    await syncSessions();
+    const now = Date.now(), r = startWork(st.sessions, id, now);
+    if (r.same) {
+      toast("M\xE1r ezen a feladaton dolgozol.");
+      return;
+    }
+    live.gap = null;
+    setHb(now);
+    queueSave("s");
+    render();
+    const msg = r.closed ? `V\xE1lt\xE1s: ${nameOf(r.closed.feladat_id)} \u2192 ${nameOf(id)}` : `Munka elind\xEDtva: ${nameOf(id)}`;
+    toast(msg, "Visszavon\xE1s", () => {
+      if (!r.started || !isActive(r.started) || !st.sessions.includes(r.started)) {
+        toast("M\xE1r nem vonhat\xF3 vissza.");
+        return;
+      }
+      st.sessions.splice(st.sessions.indexOf(r.started), 1);
+      if (r.closed && !activeOf(st.sessions)) Object.assign(r.closed, { veg: "", idotartam_mp: "", ok: "" });
+      queueSave("s");
+      render();
+    });
+  }
+  async function pauseActive() {
+    await syncSessions();
+    const a = activeOf(st.sessions);
+    if (!a) return;
+    const now = Date.now(), cap = capOf(live.gap), d = durMs(a, now, cap);
+    const c = pauseWork(st.sessions, Math.min(now, cap));
+    live.gap = null;
+    queueSave("s");
+    render();
+    toast(`Sz\xFCneteltetve \xB7 ${fmtWork(d)} \xB7 ${nameOf(c.feladat_id)}`, "Folytat\xE1s", () => startWorkOn(c.feladat_id));
+  }
+  async function finishActive() {
+    await syncSessions();
+    const a = activeOf(st.sessions);
+    if (!a) return;
+    const id = a.feladat_id, t = st.tasks.find((x) => x.id === id);
+    if (!t) {
+      pauseWork(st.sessions, Math.min(Date.now(), capOf(live.gap)));
+      live.gap = null;
+      queueSave("s");
+      render();
+      return;
+    }
+    const cap = capOf(live.gap);
+    if (cap !== Infinity) {
+      stopForTask(st.sessions, id, cap, "kesz");
+      queueSave("s");
+    }
+    live.gap = null;
+    updateTask(id, { statusz: "kesz" });
+    toast(`K\xE9sz \xB7 ${nameOf(id)} \xB7 r\xE1ford\xEDt\xE1s: ${fmtWork(workMsOfTask(st.sessions, id, Date.now()))}`);
+  }
+  var hbAt = 0;
+  function liveWatch(now) {
+    const a = activeOf(st.sessions);
+    if (!a) {
+      if (live.gap) {
+        live.gap = null;
+        render();
+      }
+      return;
+    }
+    if (live.gap) {
+      if (live.gap.id !== a.id) {
+        live.gap = null;
+        render();
+      }
+      return;
+    }
+    const g = gapCheck(a, getHb(), now);
+    if (g) {
+      live.gap = { ...g, id: a.id };
+      render();
+      return;
+    }
+    if (now - hbAt >= 5e3 || now < hbAt) {
+      setHb(now);
+      hbAt = now;
+    }
+  }
+  function resolveGap(how, at) {
+    const g = live.gap, a = activeOf(st.sessions);
+    if (!g || !a) {
+      live.gap = null;
+      render();
+      return;
+    }
+    const now = Date.now(), lo = toMs(a.kezdet), hi = Math.max(now, lo);
+    const from = Math.min(Math.max(g.fromMs, lo), hi);
+    if (how === "keep") {
+      if (g.kind === "clock") return;
+      live.gap = null;
+      setHb(now);
+      hbAt = now;
+      render();
+      return;
+    }
+    if (how === "resume") {
+      const id = a.feladat_id;
+      closeSession(a, from, "szunet");
+      startWork(st.sessions, id, now);
+      live.gap = null;
+      setHb(now);
+      hbAt = now;
+      queueSave("s");
+      render();
+      toast("Sz\xFCnet r\xF6gz\xEDtve, a munka most folytat\xF3dik.");
+      return;
+    }
+    if (how === "stop") {
+      let end = toMs(at);
+      if (!isNaN(end) && end < lo && lo - end < 6e4) end = lo;
+      if (isNaN(end)) {
+        toast("Adj meg \xE9rv\xE9nyes id\u0151pontot.");
+        return;
+      }
+      if (end < lo || end > hi + 6e4) {
+        toast(`Az id\u0151pont a munkamenet kezdete (${a.kezdet.replace("T", " ").slice(0, 16)}) \xE9s most k\xF6z\xF6tt legyen.`);
+        return;
+      }
+      closeSession(a, Math.min(end, hi), "szunet");
+      live.gap = null;
+      queueSave("s");
+      render();
+      toast(`Le\xE1ll\xEDtva ${stampAt(Math.min(end, hi)).replace("T", " ").slice(0, 16)}-kor \xB7 ${fmtWork(workMsOfTask(st.sessions, a.feladat_id, now))} \xF6sszesen`);
+    }
+  }
+
   // src/clock.js
   var lastMinute = 0;
   function tick() {
     const n = /* @__PURE__ */ new Date();
     $("#clock").textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+    liveWatch(n.getTime());
     updateLive(n.getTime());
     const mk = Math.floor(n.getTime() / 6e4);
     if (mk !== lastMinute) {
       lastMinute = mk;
       $("#dateLine").textContent = n.toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
-      if (!st.editing && ov.pEdit == null && document.visibilityState === "visible") render();
+      if (!st.editing && ov.pEdit == null && document.visibilityState === "visible" && !(live.gap && document.activeElement && document.activeElement.closest && document.activeElement.closest(".ld-gap"))) render();
     }
   }
 
@@ -2551,78 +2744,6 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     } else if (k === "Tab" && v && !ex && n && !ac.items[ac.on].isNew) acPick(ac.on);
   }, true);
 
-  // src/work.js
-  var setHb = (ms) => {
-    try {
-      localStorage.setItem(LS_HB, String(ms));
-    } catch {
-    }
-  };
-  var nameOf = (id) => {
-    const t = st.tasks.find((x) => x.id === id);
-    return t ? clip(t.feladat.replace(/\s+/g, " "), 50) : "(t\xF6r\xF6lt feladat)";
-  };
-  async function startWorkOn(id) {
-    const t = st.tasks.find((x) => x.id === id);
-    if (!t || isDone(t) || isParked(t)) {
-      toast("Csak nyitott, \xFCtemezett feladaton ind\xEDthat\xF3 munka.");
-      return;
-    }
-    await syncSessions();
-    const now = Date.now(), r = startWork(st.sessions, id, now);
-    if (r.same) {
-      toast("M\xE1r ezen a feladaton dolgozol.");
-      return;
-    }
-    live.gap = null;
-    setHb(now);
-    queueSave("s");
-    render();
-    const msg = r.closed ? `V\xE1lt\xE1s: ${nameOf(r.closed.feladat_id)} \u2192 ${nameOf(id)}` : `Munka elind\xEDtva: ${nameOf(id)}`;
-    toast(msg, "Visszavon\xE1s", () => {
-      if (!r.started || !isActive(r.started) || !st.sessions.includes(r.started)) {
-        toast("M\xE1r nem vonhat\xF3 vissza.");
-        return;
-      }
-      st.sessions.splice(st.sessions.indexOf(r.started), 1);
-      if (r.closed && !activeOf(st.sessions)) Object.assign(r.closed, { veg: "", idotartam_mp: "", ok: "" });
-      queueSave("s");
-      render();
-    });
-  }
-  async function pauseActive() {
-    await syncSessions();
-    const a = activeOf(st.sessions);
-    if (!a) return;
-    const now = Date.now(), cap = capOf(live.gap), d = durMs(a, now, cap);
-    const c = pauseWork(st.sessions, Math.min(now, cap));
-    live.gap = null;
-    queueSave("s");
-    render();
-    toast(`Sz\xFCneteltetve \xB7 ${fmtWork(d)} \xB7 ${nameOf(c.feladat_id)}`, "Folytat\xE1s", () => startWorkOn(c.feladat_id));
-  }
-  async function finishActive() {
-    await syncSessions();
-    const a = activeOf(st.sessions);
-    if (!a) return;
-    const id = a.feladat_id, t = st.tasks.find((x) => x.id === id);
-    if (!t) {
-      pauseWork(st.sessions, Math.min(Date.now(), capOf(live.gap)));
-      live.gap = null;
-      queueSave("s");
-      render();
-      return;
-    }
-    const cap = capOf(live.gap);
-    if (cap !== Infinity) {
-      stopForTask(st.sessions, id, cap, "kesz");
-      queueSave("s");
-    }
-    live.gap = null;
-    updateTask(id, { statusz: "kesz" });
-    toast(`K\xE9sz \xB7 ${nameOf(id)} \xB7 r\xE1ford\xEDt\xE1s: ${fmtWork(workMsOfTask(st.sessions, id, Date.now()))}`);
-  }
-
   // src/events.js
   $("#addForm").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -2732,6 +2853,9 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
       if (a === "start") startWorkOn(lv.dataset.id);
       else if (a === "pause") pauseActive();
       else if (a === "finish") finishActive();
+      else if (a === "gap-keep") resolveGap("keep");
+      else if (a === "gap-resume") resolveGap("resume");
+      else if (a === "gap-stop") resolveGap("stop", ($("#ldGapAt") || {}).value);
       return;
     }
     const g = e.target.closest("[data-goto]");
@@ -3021,14 +3145,12 @@ Biztosan \xFAj megb\xEDz\xF3t veszel fel: \u201E${n}\u201D?`)) return;
   var onFocus = () => {
     if (!st.dateTouched) $("#fDate").value = todayStr();
     checkExternal();
+    tick();
   };
   window.addEventListener("focus", onFocus);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") flush();
-    else {
-      onFocus();
-      tick();
-    }
+    else onFocus();
   });
   window.addEventListener("beforeunload", (e) => {
     if (st.dirty || st.saving) {
