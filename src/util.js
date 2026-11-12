@@ -8,6 +8,8 @@ export const todayStr = () => dstr(new Date());
 
 export const stamp = () => { const d = new Date(); return `${dstr(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
 
+// egy adott időpont (ms) helyi, zóna nélküli ISO-bélyege
+export const stampAt = ms => { const d = new Date(ms); return `${dstr(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
 let seq = 0;
 
 export const newId = () => 't' + Date.now().toString(36) + (seq++).toString(36) + Math.random().toString(36).slice(2,5);

@@ -145,28 +145,23 @@ export function queueSave(kind){                                              //
   clearTimeout(st.saveTimer); st.saveTimer = setTimeout(flush, 300);
 }
 
+// Segéd-fájlok (megbízók P, előzmények H) közös mentése: ha közben kívülről módosult, előbb egyesít, aztán ír (a fájl atomi cseréjével)
+async function flushAux(k, mergeRaw, serialize){
+  st['dirty' + k] = false;
+  const fh = st['fh' + k], f = await fh.getFile();
+  if (f.lastModified !== st['lastMod' + k]) { const raw = await decodeFile(f); if (raw.trim()) mergeRaw(raw); }
+  const w = await fh.createWritable(); await w.write(serialize()); await w.close();
+  st['lastMod' + k] = (await fh.getFile()).lastModified;
+}
+
 export async function flush(){
   clearTimeout(st.saveTimer); clearTimeout(st.retryTimer);
   if (st.mode !== 'folder' || st.saving) { renderStatus(); return; }
   st.saving = true; st.err = null; renderStatus();
   try {
     while (st.dirty || st.dirtyP || st.dirtyH) {
-      if (st.dirtyP) {                                                      // előbb a megbízók, aztán a feladatok
-        st.dirtyP = false;
-        const fp = await st.fhP.getFile();
-        if (fp.lastModified !== st.lastModP) {                              // közben kívülről módosult → a hiányzó nevek hozzáadódnak
-          const rawP = await decodeFile(fp); if (rawP.trim()) mergePeopleInto(st.people, parsePeople(rawP), st.deletedP);
-        }
-        const wp = await st.fhP.createWritable(); await wp.write(peopleToCSV(st.people)); await wp.close();
-        st.lastModP = (await st.fhP.getFile()).lastModified;
-      }
-      if (st.dirtyH) {                                                      // előzmények: csak bővül, külső változásnál unió
-        st.dirtyH = false;
-        const fh = await st.fhH.getFile();
-        if (fh.lastModified !== st.lastModH) mergeHistory(st.hist, parseHistory(await decodeFile(fh)));
-        const wh = await st.fhH.createWritable(); await wh.write(histToCSV(st.hist)); await wh.close();
-        st.lastModH = (await st.fhH.getFile()).lastModified;
-      }
+      if (st.dirtyP) await flushAux('P', raw => mergePeopleInto(st.people, parsePeople(raw), st.deletedP), () => peopleToCSV(st.people));   // előbb a megbízók,
+      if (st.dirtyH) await flushAux('H', raw => mergeHistory(st.hist, parseHistory(raw)), () => histToCSV(st.hist));                         // az előzmények (csak bővülnek),
       if (st.dirty) {
         st.dirty = false;
         const f = await st.fh.getFile();
