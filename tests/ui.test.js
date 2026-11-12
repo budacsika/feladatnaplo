@@ -561,6 +561,25 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert(dash.lists.includes('Mért idő · feladatok') && dash.lists.includes('Mért idő · megbízók'), 'feladatonkénti és megbízónkénti mért idő');
   await (await page.$('#dash')).screenshot({ path: path.resolve(OUT, 'shot-stats.png') });
 
+  // 16) Sérült munkamenet-fájl és külső írás: a program javít, másolatot készít, és egyesít
+  await page.click('#today [data-live="pause"]').catch(() => {});
+  await page.reload();
+  await page.waitForSelector('#today');
+  await page.evaluate(id => window.__put('munkamenetek.csv', ['id;feladat_id;kezdet;veg;idotartam_mp;ok', `ext1;${id};2026-11-09T07:00:00;2026-11-09T07:20:00;1200;szunet`, 'bad1;;;;;', `ext2;${id};2026-11-09T08:00:00;2026-11-09T07:00:00;60;szunet`, 'csak egy oszlop'].join('\r\n') + '\r\n'), idB);
+  await page.evaluate(() => localStorage.setItem('feladatnaplo.v1.offline', '1'));
+  await page.click('#btnFolder');
+  await page.waitForFunction(() => document.querySelector('#pill').className.includes('ok'), { timeout: 4000 });
+  await sleep(800);
+  const fixedCopy = await page.evaluate(() => window.__list(window.__root.children.get('mentesek')));
+  assert(fixedCopy.some(n => /munkamenetek.*javitas-elott/.test(n)), 'a sérült munkamenet-fájlról másolat készült: ' + fixedCopy);
+  const fixedTxt = await page.evaluate(() => window.__text('munkamenetek.csv'));
+  assert(fixedTxt.includes('ext1') && !fixedTxt.includes('bad1') && !fixedTxt.includes('csak egy oszlop'), 'a javított fájl érvényes sorokat tartalmaz: ' + fixedTxt);
+  // külső írás (másik gép / fül): új lezárt munkamenet a fájlban → fókuszkor egyesül
+  await page.evaluate(id => { const t = window.__text('munkamenetek.csv'); window.__put('munkamenetek.csv', t.replace(/\r?\n$/, '') + `\r\next3;${id};2026-11-09T06:00:00;2026-11-09T06:30:00;1800;szunet\r\n`); window.__root.children.get('munkamenetek.csv').mtime = Date.now() + 20000; window.dispatchEvent(new Event('focus')); }, idB);
+  await sleep(1200);
+  assert((await page.evaluate(() => localStorage.getItem('feladatnaplo.v1.sessions'))).includes('ext3'), 'a külső munkamenet átvéve');
+  assert((await page.evaluate(() => window.__text('munkamenetek.csv'))).includes('ext3'), 'és megmarad a fájlban');
+
   assert.deepStrictEqual(errors, [], 'nincs JS hiba: ' + errors.join(' | '));
   console.log('UI teszt rendben ✔');
   await browser.close();

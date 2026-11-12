@@ -56,6 +56,16 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 - Több gép / fájl között azonosító szerinti unióval egyesül, így nem vész el esemény.
 - A napló nem kerül a nyomtatásba.
 
+**Live Desk: munkaidő-mérés**
+- Egy feladaton egyszerre egy munka futhat. A ▶ gombbal indítod a listában vagy a „Következő feladatok" között; a Mai sáv alatt az aktív feladat, az aktuális munkamenet ideje és a feladatra összesen fordított idő látszik.
+- **Szünet** lezárja a munkamenetet, a feladat nyitott marad (a „Folytatás" új munkamenetet indít). **Kész** lezárja a munkamenetet és késszé teszi a feladatot. A lista pipája az aktív feladaton ugyanígy leállítja az időmérést. Újranyitáskor a korábban mért idő megmarad.
+- **Váltás**: másik feladat indítása megerősítés nélkül lezárja a futót; a határidők és napok nem változnak. A visszajelzésben (toast) a váltás visszavonható.
+- Az idő mindig a kezdő időpontból számolódik, nem számlálóból, ezért háttérfül, oldalfrissítés és újraindítás után is helyes.
+- **Alvás és óraváltozás**: ha a program 5 percnél hosszabb ideig nem „élt" (alvó gép, zárolás, bezárt fül), vagy az óra elugrott, a mért idő megáll, és a sáv alatt kérdés jelenik meg: *Végig dolgoztam* / *Szünet volt – folytatom most* / *Leállítás itt: …* (időpont megadható). Amíg a kérdés függőben van, csak az ismert idő számít. Rövid kihagyás (pl. oldalfrissítés) nem kérdez.
+- Több fül: ha az egyik fül munkamenetet ír, a többi egyesít; két nyitott munkamenet közül a később indult marad aktív.
+- **Statisztika**: a heti és havi panelen mért idő (összes, napi a heti diagramon), feladatonkénti és megbízónkénti toplista, és a kész feladatok átlagos tényleges ráfordítása. Az **átfutási idő** (létrehozástól lezárásig) külön fogalom, nem keveredik a mért munkaidővel. A Tárolóban lévő feladat ideje beleszámít az időösszegekbe, de a feladat-statisztikába nem.
+- Nem kötelező: időmérés nélkül a program a korábbiak szerint működik; régi CSV-k változtatás nélkül használhatók.
+
 **Keresés és szűrés**
 - Élő, ékezet- és kisbetű-független keresés; `#címke` és `@megbízó` is használható
 - Állapot- és időszakszűrő; nyomtatás / PDF az aktuális szűrés szerint
@@ -82,6 +92,9 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
   - a `hatarido` dátum vagy dátum+idő (`2026-11-12T16:00`)
 - `megbizok.csv`: `nev;megjegyzes;aktiv` (`igen` / `nem`)
 - `tortenet.csv`: `id;feladat;idopont;mezo;regi;uj`, egy sor egy esemény (`feladat` = a feladat azonosítója). `mezo`: `letrehozva`, `torolve`, `visszaallitva`, vagy a változott oszlop neve (`statusz`, `hatarido`, `megbizo`, `datum`, `feladat`, `tarolo`); `regi` / `uj` a régi és az új érték. Ne szerkeszd kézzel: a sorok azonosító szerint egyesülnek, az érvénytelen sorokat a program eldobja.
+- `munkamenetek.csv`: `id;feladat_id;kezdet;veg;idotartam_mp;ok`, egy sor egy munkamenet. A futó munkamenet sorában a `veg`, az `idotartam_mp` és az `ok` üres. `ok`: `szunet`, `valtas`, `kesz`, `tarolo` (a feladat Tárolóba tétele zárta le), `torles` (a feladat törlése zárta le). Az időtartam a valós eltelt időből készül lezáráskor.
+  - A `kezdet` és a `veg` helyi, időzóna nélküli időbélyeg (mint a többi fájlban), ezért az óraállítás (nyári/téli idő) a rögzített időtartamot nem torzítja; éjfélen átnyúló munkamenet a statisztikában kettéosztódik a napok között.
+  - Hibás vagy hiányzó sor beolvasáskor javítódik / eldobódik (előtte `…_javitas-elott.csv` másolat készül); ismeretlen fejlécű fájlt a program nem ír felül. Ne szerkeszd kézzel futó munka közben.
 - UTF-8 BOM, `;` elválasztó, CRLF sorvég. Excelben szerkeszthető; a beolvasás oszlopsorrend-független, felismeri a `,`/tabulátor elválasztót és az Excel-es dátumformátumokat (`2026.11.09`).
 - Régebbi formátumok (fejléc nélküli `datum;feladat`, `cimke` oszlopos) betöltéskor automatikusan átalakulnak, előtte külön `…_atalakitas-elott.csv` másolat készül a `mentesek` mappában.
 
@@ -96,14 +109,15 @@ src/
   app.js                belépési pont (indítás, óra)
   events.js             eseménykötések
   state.js              közös állapot: st (adatok), ui (szűrők), ov (nézetek)
-  util.js tasks.js csv.js people-model.js stats.js history.js     DOM-mentes logika (ezt tesztelik a Node-tesztek)
-  filter.js list.js park.js dash.js journal.js render.js status.js people.js autocomplete.js     megjelenítés
+  util.js tasks.js csv.js people-model.js stats.js history.js worktime.js     DOM-mentes logika (ezt tesztelik a Node-tesztek)
+  filter.js list.js park.js dash.js journal.js render.js status.js people.js autocomplete.js livedesk.js     megjelenítés
   storage.js            mentés/betöltés: mappa, IndexedDB, mentések, külső változás
   audit.js              változás-észlelés: a mentés előtt az eltérésekből előzmény-események lesznek
   actions.js clock.js   feladatműveletek, óra
+  work.js               munkamenet-műveletek (indítás, szünet, kész, alvás/óraugrás feloldása)
 ```
 
-A DOM-mentes modulok (`util`, `tasks`, `csv`, `people-model`, `stats`, `history`) nem importálnak a `state.js`-ből, ezért Node-ban közvetlenül tesztelhetők. A verziószámot a `package.json` adja, a build beleteszi a felületbe.
+A DOM-mentes modulok (`util`, `tasks`, `csv`, `people-model`, `stats`, `history`, `worktime`) nem importálnak a `state.js`-ből, ezért Node-ban közvetlenül tesztelhetők. A verziószámot a `package.json` adja, a build beleteszi a felületbe.
 
 ```
 npm install
@@ -115,7 +129,8 @@ npm run test:ui   # csak a böngészős teszt
 ```
 
 - `tests/pure.test.js`: CSV beolvasás/kiírás és migráció, dátum- és időellenőrzés, határidő-állapotok, heti/havi statisztika, rendezés, megbízók (egyezés, javaslat, összefésülés), Tároló, előzmények (változás-észlelés, CSV, egyesítés, leírások, idővonal, napi napló).
-- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, előzményeket és a napi naplót, nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
+- `tests/worktime.test.js`: a munkamenet-modell (indítás, szünet, váltás, kész, újranyitás, több munkamenet összege, éjfél, nyári/téli időszámítás-váltás, alvás- és óraugrás-észlelés, CSV, hibás/hiányzó/két aktív sor, egyesítés) és a mért idő statisztika, rögzített időzónában és vezérelt órával.
+- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, előzményeket és a napi naplót, a Live Desket (indítás, váltás, szünet, kész, frissítés utáni helyreállás, alvás és óraugrás vezérelt órával, statisztika), nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
 - A UI-teszt Chrome-ot keres a szokásos helyeken; ha máshol van, add meg a `CHROME_PATH` környezeti változóval.
 
 Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verziókezelésbe.
@@ -128,6 +143,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 | 2.6.1 | Szigorúbb dátum- és időellenőrzés (feb. 31., szökőév, óra/perc tartomány) |
 | 2.7.0 | Moduláris forrás (`src/`), egyfájlos build (esbuild); a működés változatlan |
 | 2.8.0 | Előzmények: `tortenet.csv`, feladatonkénti idővonal és napi napló |
+| 2.9.0 | Live Desk: munkaidő-mérés (`munkamenetek.csv`), élő sáv, alvás/óraugrás-ellenőrzés, mért idő a statisztikában |
 | 2.5 | Tároló: nem ütemezett feladatok, `tarolo` oszlop |
 | 2.4 | Heti és havi áttekintés újratervezve, többsoros határidő-lista |
 | 2.3 | Napi státusz lapos sávban felül, heti/havi/megbízói blokk alul, kiemelt felviteli űrlap |
