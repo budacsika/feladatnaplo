@@ -139,11 +139,11 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
-| 2.6 | Összecsukható napok (alapból csak a mai nyitott) |
-| 2.6.1 | Szigorúbb dátum- és időellenőrzés (feb. 31., szökőév, óra/perc tartomány) |
-| 2.7.0 | Moduláris forrás (`src/`), egyfájlos build (esbuild); a működés változatlan |
-| 2.8.0 | Előzmények: `tortenet.csv`, feladatonkénti idővonal és napi napló |
 | 2.9.0 | Live Desk: munkaidő-mérés (`munkamenetek.csv`), élő sáv, alvás/óraugrás-ellenőrzés, mért idő a statisztikában |
+| 2.8.0 | Előzmények: `tortenet.csv`, feladatonkénti idővonal és napi napló |
+| 2.7.0 | Moduláris forrás (`src/`), egyfájlos build (esbuild); a működés változatlan |
+| 2.6.1 | Szigorúbb dátum- és időellenőrzés (feb. 31., szökőév, óra/perc tartomány) |
+| 2.6 | Összecsukható napok (alapból csak a mai nyitott) |
 | 2.5 | Tároló: nem ütemezett feladatok, `tarolo` oszlop |
 | 2.4 | Heti és havi áttekintés újratervezve, többsoros határidő-lista |
 | 2.3 | Napi státusz lapos sávban felül, heti/havi/megbízói blokk alul, kiemelt felviteli űrlap |
