@@ -1,0 +1,5 @@
+node_modules/
+tests/out/
+# a saját adatok sosem kerülnek fel
+*.csv
+mentesek/

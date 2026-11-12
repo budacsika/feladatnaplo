@@ -1,0 +1,12 @@
+{
+  "name": "feladatnaplo",
+  "version": "2.6.0",
+  "private": true,
+  "description": "Egyfájlos, böngészőben futó feladatnapló (CSV-tárolás a File System Access API-val)",
+  "scripts": {
+    "test": "node tests/pure.test.js && node tests/ui.test.js",
+    "test:pure": "node tests/pure.test.js",
+    "test:ui": "node tests/ui.test.js"
+  },
+  "devDependencies": { "puppeteer-core": "^25.16.0" }
+}
