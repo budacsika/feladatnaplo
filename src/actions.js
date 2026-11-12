@@ -12,6 +12,7 @@ import { stopForTask } from './worktime.js';
 export function updateTask(id, patch){
   const t = st.tasks.find(x => x.id === id); if (!t) return;
   const nowMs = Date.now(), ts = stampAt(nowMs);
+  if (patch.statusz === 'kesz' && !ui.dayState.has(t.datum)) ui.dayState.set(t.datum, true);     // az utolsó feladat kipipálásakor a nap ne csukódjon be a kéz alatt
   Object.assign(t, patch, { modositva: ts });
   if (patch.statusz !== undefined) t.lezarva = patch.statusz === 'kesz' ? ts : '';
   // az éppen mért feladat lezárása / Tárolóba tétele: a munkamenet szabályosan lezárul (a lezárás ideje = a lezarva időbélyeg)

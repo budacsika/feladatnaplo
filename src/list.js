@@ -70,7 +70,7 @@ export function renderList(){
   const today = todayStr();
   const forced = terms.length > 0 || ui.status !== 'all' || ui.period !== 'all';          // keresés/szűrés közben minden találat látszik
   const editDay = st.editing ? (st.tasks.find(x => x.id === st.editing) || {}).datum : null;
-  const isOpen = ds => forced || ds === editDay || (ui.dayState.has(ds) ? ui.dayState.get(ds) : ds === today);
+  const isOpen = ds => forced || ds === editDay || (ui.dayState.has(ds) ? ui.dayState.get(ds) : ds === today || cnt[ds] > (dn[ds] || 0));   // alapból nyitva: a mai nap és minden nap, amelyikben van megoldatlan feladat
   let html = '', cur = null;
   for (const t of vis) {
     if (t.datum !== cur) {

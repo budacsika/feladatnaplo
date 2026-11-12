@@ -360,12 +360,12 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert(!/;torolve;[^;]*Admin/.test(hist) && (hist.match(/;torolve;/g) || []).length === 1, 'a külső csere nem naplózódik törlésként (csak a kívülről jött 1 esemény van)');
   assert(hist.includes('ext1;gone1;'), 'a külső esemény megmaradt a fájlban');
 
-  // 11) napok összecsukása: alapból csak a mai nyitott
+  // 11) napok összecsukása: alapból a mai nap és a megoldatlan feladatot tartalmazó napok nyitottak
   await page.$eval('#fDate', e => { e.value = '2026-11-06'; e.dispatchEvent(new Event('change')); });
   await page.type('#fText', 'Múltbeli feladat'); await page.click('#addForm .primary');
   await page.waitForFunction(() => document.body.innerText.includes('Múltbeli feladat'));
   const dayCls = d => page.$eval(`.day:has(.dtoggle[data-day="${d}"])`, e => e.className);
-  assert(!/collapsed/.test(await dayCls('2026-11-06')), 'új sor napja kinyílik (flash)');
+  assert(!/collapsed/.test(await dayCls('2026-11-06')), 'a megoldatlan feladatot tartalmazó nap alapból nyitva van');
   await page.click('.dtoggle[data-day="2026-11-06"]');
   assert(/collapsed/.test(await dayCls('2026-11-06')), 'fejlécre kattintva összecsukódik');
   assert.strictEqual(await page.$eval('.day.collapsed ul', e => getComputedStyle(e).display), 'none');
@@ -373,16 +373,26 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert(!/collapsed/.test(await dayCls('2026-11-09')), 'a mai nap nyitva marad');
   await page.type('#q', 'Múltbeli'); assert(!/collapsed/.test(await dayCls('2026-11-06')), 'keresés kinyitja a találatot');
   await page.$eval('#q', e => { e.value = ''; e.dispatchEvent(new Event('input')); });
-  assert(/collapsed/.test(await dayCls('2026-11-06')), 'keresés törlése után újra zárt');
+  assert(/collapsed/.test(await dayCls('2026-11-06')), 'keresés törlése után a kézzel zárt nap újra zárt');
   await page.click('#daysAll'); assert.strictEqual(await page.$$eval('.day.collapsed', e => e.length), 0, 'mind kinyit');
-  await page.click('#daysToday'); assert(/collapsed/.test(await dayCls('2026-11-06')) && !/collapsed/.test(await dayCls('2026-11-09')), 'csak ma');
+  await page.click('#daysToday'); assert(!/collapsed/.test(await dayCls('2026-11-06')) && !/collapsed/.test(await dayCls('2026-11-09')), 'alapnézet: a nyitott feladatos nap nyitva marad');
+  // az utolsó megoldatlan feladat kipipálásakor a nap nem csukódik be a kéz alatt; alapnézetben viszont a csupa kész nap zárt
+  const tickOld = () => page.evaluate(() => [...document.querySelectorAll('#list .task')].find(li => li.textContent.includes('Múltbeli feladat')).querySelector('.chk').click());
+  await tickOld(); await sleep(300);
+  assert(!/collapsed/.test(await dayCls('2026-11-06')), 'kipipáláskor a nap nyitva marad');
+  await page.click('#daysToday');
+  assert(/collapsed/.test(await dayCls('2026-11-06')) && !/collapsed/.test(await dayCls('2026-11-09')), 'alapnézet: a csupa kész nap zárt, a mai nyitott');
+  await page.click('#daysAll'); await tickOld(); await sleep(300);                         // újra megoldatlan (a későbbi lépések az eredeti állapotot várják)
+  await page.click('#daysToday');
+  assert(!/collapsed/.test(await dayCls('2026-11-06')), 'újranyitás után a nap megint nyitva');
+  await page.click('.dtoggle[data-day="2026-11-06"]');                                       // a nyomtatási próba zárt napot kíván
   await page.emulateMediaType('print');
   assert.strictEqual(await page.$eval('.day.collapsed ul', e => getComputedStyle(e).display), 'block', 'nyomtatásban minden nap látszik');
   await page.emulateMediaType('screen');
   await sleep(700);
   await page.reload();
   await page.waitForFunction(() => document.querySelectorAll('#list .day').length > 1, { timeout: 4000 });
-  assert(/collapsed/.test(await dayCls('2026-11-06')) && !/collapsed/.test(await dayCls('2026-11-09')), 'újratöltés után is: csak a mai nyitott');
+  assert(!/collapsed/.test(await dayCls('2026-11-06')) && !/collapsed/.test(await dayCls('2026-11-09')), 'újratöltés után is nyitva: a megoldatlan feladatos nap és a mai');
 
   // 12) hosszú határidős szöveg sortörése, visszavonás, billentyűk (újratöltés után, a böngésző helyi tárából)
   await page.setViewport({ width: 1280, height: 1000 });
@@ -560,6 +570,13 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert(dash.wt >= 1, 'a heti diagram a napi mért időt mutatja');
   assert(dash.lists.includes('Mért idő · feladatok') && dash.lists.includes('Mért idő · megbízók'), 'feladatonkénti és megbízónkénti mért idő');
   await (await page.$('#dash')).screenshot({ path: path.resolve(OUT, 'shot-stats.png') });
+  for (const [w, name] of [[900, 'shot-stats-900.png'], [390, 'shot-stats-390.png']]) {          // közepes és telefonos szélesség: nincs vízszintes görgetés, a KPI-értékek nem törnek
+    await page.setViewport({ width: w, height: 1000 }); await sleep(250);
+    assert.strictEqual(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, `${w}px: nincs vízszintes görgetés`);
+    assert.strictEqual(await page.$$eval('#dash .kv', els => els.every(e => e.getBoundingClientRect().height < 30)), true, `${w}px: a mutatók értéke egy sorban marad`);
+    await (await page.$('#dash')).screenshot({ path: path.resolve(OUT, name) });
+  }
+  await page.setViewport({ width: 1280, height: 1000 }); await sleep(250);
 
   // 16) Sérült munkamenet-fájl és külső írás: a program javít, másolatot készít, és egyesít
   await page.click('#today [data-live="pause"]').catch(() => {});
@@ -579,6 +596,12 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   await sleep(1200);
   assert((await page.evaluate(() => localStorage.getItem('feladatnaplo.v1.sessions'))).includes('ext3'), 'a külső munkamenet átvéve');
   assert((await page.evaluate(() => window.__text('munkamenetek.csv'))).includes('ext3'), 'és megmarad a fájlban');
+
+  const todayStr0 = await page.evaluate(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; });
+  // 17) gyorsgomb: „Ma 16:30" (a munkaidő vége)
+  await page.click('#addForm [data-due="today1630"]');
+  assert.strictEqual(await page.$eval('#fDue', e => e.value), todayStr0 + 'T16:30', 'a gyorsgomb ma 16:30-ra állítja a határidőt');
+  assert.strictEqual(await page.$eval('#addForm [data-due="today1630"]', e => e.textContent.trim()), 'Ma 16:30');
 
   assert.deepStrictEqual(errors, [], 'nincs JS hiba: ' + errors.join(' | '));
   console.log('UI teszt rendben ✔');

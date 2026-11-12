@@ -42,7 +42,7 @@ $('#addForm').addEventListener('click', e => {
   const b = e.target.closest('[data-due]'); if (!b) return;
   const n = new Date(), k = b.dataset.due;
   if (k === '+2h') n.setTime(Date.now() + 2*3600e3);
-  else if (k === 'today17') n.setHours(17, 0, 0, 0);
+  else if (k === 'today1630') n.setHours(16, 30, 0, 0);
   else if (k === 'tom9') { n.setDate(n.getDate() + 1); n.setHours(9, 0, 0, 0); }
   $('#fDue').value = k === 'clear' ? '' : dtValue(n);
 });

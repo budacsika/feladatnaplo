@@ -139,19 +139,23 @@ button{cursor:pointer}
 .kv{font-size:20px;line-height:1.1;text-shadow:0 0 12px currentColor}
 .ovg{display:grid;gap:20px;align-items:stretch}
 .ovg>div{min-width:0}
-.ovg-w{grid-template-columns:200px minmax(0,1fr) 290px;grid-template-areas:"k c t"}
-.ovg-m{grid-template-columns:200px 214px minmax(0,1fr) 290px;grid-template-areas:"k h c t"}
+.ovg{gap:12px 20px}
+.ovg-w{grid-template-columns:minmax(0,1fr) 460px;grid-template-areas:"k k" "c t"}
+.ovg-m{grid-template-columns:214px minmax(0,1fr) 460px;grid-template-areas:"k k k" "h c t"}
 .ov-k{grid-area:k} .ov-h{grid-area:h} .ov-c{grid-area:c} .ov-t{grid-area:t}
-.ov-k,.ov-h,.ov-c{padding-right:20px;border-right:1px solid var(--line)}
-.ov-t{padding-left:0}
-.ov-k .kpis{grid-template-columns:1fr 1fr;gap:14px 12px}
-.ov-k .kv{font-size:27px}
-.ov-k .pbar{margin:10px 0 0}
+.ov-h,.ov-c{padding-right:20px;border-right:1px solid var(--line)}
+.ov-k{padding-bottom:10px;border-bottom:1px solid var(--line)}
+.ov-k .kpis{grid-template-columns:repeat(6,minmax(0,1fr));gap:0;margin:0}
+.ov-k .kpi{min-width:0;padding:0 14px;border-left:1px solid var(--line)}
+.ov-k .kpi:first-child{padding-left:0;border-left:0}
+.ov-k .kv{font-size:21px;white-space:nowrap}
+.ov-k .ks{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov-k .pbar{margin:9px 0 0}
 .ov-c .chart{width:100%}
 .legend{display:flex;gap:14px;margin-top:4px;font-size:10.5px;color:var(--muted)}
 .legend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:1px}
 .legend .d{background:linear-gradient(var(--cyan),var(--cyan2))} .legend .o{background:linear-gradient(var(--gold),#b98200)}
-.ov-t .tops{gap:14px}
+.ov-t .tops{grid-template-columns:1fr 1fr;gap:12px 22px;align-content:start}
 .ov-t .tr{font-size:12px;padding:2px 3px}
 
 .kpi .cap{font-size:9px}
@@ -310,12 +314,16 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
 @media (max-width:1060px){
-  .ovg-w{grid-template-columns:190px minmax(0,1fr);grid-template-areas:"k c" "t t"}
-  .ovg-m{grid-template-columns:190px minmax(0,1fr);grid-template-areas:"k h" "c c" "t t"}
-  .ov-h{border-right:0;padding-right:0} .ov-t .tops{grid-template-columns:1fr 1fr}
+  .ovg-w{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "c" "t"}
+  .ovg-m{grid-template-columns:214px minmax(0,1fr);grid-template-areas:"k k" "h c" "t t"}
+  .ov-k .kpis{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:10px}
+  .ov-k .kpi:nth-child(3n+1){padding-left:0;border-left:0}
+  .ov-w .ov-c,.ovg-w .ov-c{border-right:0;padding-right:0}
+  .ov-h{border-right:0;padding-right:0}
   .tf{grid-template-columns:minmax(0,1fr)} .tf-r{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:8px} }
 @media (max-width:700px){
   .ovg-w,.ovg-m{grid-template-columns:minmax(0,1fr);grid-template-areas:none} .ovg>div{grid-area:auto!important;border-right:0!important;padding-right:0!important} .ov-t .tops{grid-template-columns:1fr}
+  .ov-k .kpis{grid-template-columns:repeat(2,minmax(0,1fr))} .ov-k .kpi:nth-child(odd){padding-left:0;border-left:0} .ov-k .kpi:nth-child(even){padding-left:14px;border-left:1px solid var(--line)}
   .tf-l{flex-wrap:wrap} .nums{flex-wrap:wrap;row-gap:8px} .num{padding:0 10px} .tf-al{grid-template-columns:minmax(0,1fr)}
   .cmd-row{flex-wrap:wrap} .cmd .primary{width:100%}
   .cmd-row2{grid-template-columns:minmax(0,1fr)}
@@ -410,8 +418,6 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .tr b.tm{width:auto;min-width:44px;white-space:nowrap;color:var(--cyan)}
 .tops .wtaskL .tb i,.tops .whoL .tb i{background:linear-gradient(90deg,#b98200,var(--gold))}
 .tops .wtaskL .tb i{background:linear-gradient(90deg,var(--cyan2),var(--cyan))}
-.ov-k .kpis{grid-template-columns:1fr 1fr}
-.ov-k .kpi .ks{font-size:9.5px}
 .tr.tmr{grid-template-columns:minmax(0,1fr) 40px auto}
 </style>
 </head>
@@ -452,7 +458,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
         <div class="dueline">
           <input type="datetime-local" id="fDue">
           <button type="button" class="mini" data-due="+2h" title="2 óra múlva">+2 ó</button>
-          <button type="button" class="mini" data-due="today17" title="Ma 17:00">Ma 17:00</button>
+          <button type="button" class="mini" data-due="today1630" title="Ma 16:30 (munkaidő vége)">Ma 16:30</button>
           <button type="button" class="mini" data-due="tom9" title="Holnap 9:00">Holnap 9:00</button>
           <button type="button" class="mini" data-due="clear" title="Határidő törlése">×</button>
         </div>
@@ -484,7 +490,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     <button type="button" class="ghost" id="btnJournal" aria-pressed="false" title="Egy nap eseményei időrendben">Napló</button>
     <button type="button" class="ghost" id="btnPrint" title="Az aktuális szűrés nyomtatása vagy mentése PDF-ként">Nyomtatás / PDF</button>
   </div>
-  <div class="meta"><span id="meta"></span><span class="meta-act"><button type="button" class="mini" id="daysAll" title="Minden nap kinyitása">mind kinyit</button><button type="button" class="mini" id="daysToday" title="Csak a mai nap maradjon nyitva">csak ma</button></span></div>
+  <div class="meta"><span id="meta"></span><span class="meta-act"><button type="button" class="mini" id="daysAll" title="Minden nap kinyitása">mind kinyit</button><button type="button" class="mini" id="daysToday" title="Alapállapot: a mai nap és a megoldatlan feladatot tartalmazó napok nyitva, a többi zárva">alapnézet</button></span></div>
 
   <main id="list"></main>
 
@@ -527,7 +533,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 'use strict';
 (() => {
   // src/state.js
-  var VERSION = true ? "2.9.1" : "dev";
+  var VERSION = true ? "2.9.2" : "dev";
   var FILE_NAME = "feladatnaplo.csv";
   var BACKUP_DIR = "mentesek";
   var BACKUP_KEEP = 60;
@@ -2429,7 +2435,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     const today = todayStr();
     const forced = terms.length > 0 || ui.status !== "all" || ui.period !== "all";
     const editDay = st.editing ? (st.tasks.find((x) => x.id === st.editing) || {}).datum : null;
-    const isOpen = (ds) => forced || ds === editDay || (ui.dayState.has(ds) ? ui.dayState.get(ds) : ds === today);
+    const isOpen = (ds) => forced || ds === editDay || (ui.dayState.has(ds) ? ui.dayState.get(ds) : ds === today || cnt[ds] > (dn[ds] || 0));
     let html = "", cur = null;
     for (const t of vis) {
       if (t.datum !== cur) {
@@ -2448,6 +2454,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     const t = st.tasks.find((x) => x.id === id);
     if (!t) return;
     const nowMs = Date.now(), ts = stampAt(nowMs);
+    if (patch.statusz === "kesz" && !ui.dayState.has(t.datum)) ui.dayState.set(t.datum, true);
     Object.assign(t, patch, { modositva: ts });
     if (patch.statusz !== void 0) t.lezarva = patch.statusz === "kesz" ? ts : "";
     const ended = (patch.statusz === "kesz" || patch.tarolo === "igen") && stopForTask(st.sessions, id, nowMs, patch.statusz === "kesz" ? "kesz" : "tarolo");
@@ -2866,7 +2873,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     if (!b) return;
     const n = /* @__PURE__ */ new Date(), k = b.dataset.due;
     if (k === "+2h") n.setTime(Date.now() + 2 * 36e5);
-    else if (k === "today17") n.setHours(17, 0, 0, 0);
+    else if (k === "today1630") n.setHours(16, 30, 0, 0);
     else if (k === "tom9") {
       n.setDate(n.getDate() + 1);
       n.setHours(9, 0, 0, 0);

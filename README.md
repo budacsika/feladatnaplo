@@ -25,7 +25,7 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 ## Funkciók
 
 **Felvitel és szerkesztés**
-- Gyors felvitel az oldal tetején: szöveg, megbízó, határidő, dátum (alapból a mai nap, a rögzítés időpontja a háttérben mentődik)
+- Gyors felvitel az oldal tetején: szöveg, megbízó, határidő (gyorsgombok: +2 ó, Ma 16:30 – a munkaidő vége, Holnap 9:00), dátum (alapból a mai nap, a rögzítés időpontja a háttérben mentődik)
 - `#címke` a szövegben; a leggyakoribb címkék gombként is beszúrhatók
 - Szerkesztés, törlés, visszavonás; kész jelölés (a lezárás ideje is mentődik)
 - A kész feladatok a nap aljára kerülnek, a nyitottak a rögzítés ideje szerint rendezettek
@@ -41,7 +41,7 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 **Napi nézet és statisztika**
 - Felül a napi státusz: gyűrű, számok (kész, nyitott, lejárt, régebbi nyitott, ma lezárva) és a közelgő határidők
 - Alul a heti és havi áttekintés (mutatók, oszlopdiagram, naptár-hőtérkép, megbízói és címke-toplisták, lapozás), valamint a megbízói statisztika
-- A napi szekciók összecsukhatók: alapból csak a mai nap nyitott, a többi fejlécén látszik a nyitott feladatok száma. Keresés, szűrés és nyomtatás közben minden nap látszik
+- A napi szekciók összecsukhatók: alapból a mai nap és minden olyan nap nyitva van, amelyikben van még megoldatlan feladat; a csupa kész napok zártak, fejlécükön látszik a kész/összes arány. Az „alapnézet” gomb visszaállítja ezt, a „mind kinyit” mindent kinyit. Keresés, szűrés és nyomtatás közben minden nap látszik
 
 **Tároló**
 - Nem ütemezett feladatoknak (az űrlapon a „tárolóba" jelölővel). Nincs dátumuk és határidejük, nem számítanak bele a statisztikákba
@@ -139,12 +139,13 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.9.2 | Alapból nyitva marad minden nap, amelyben van megoldatlan feladat; „Ma 16:30” gyorsgomb; kompakt heti/havi áttekintő (egysoros mutatósáv, 2×2 toplista) |
 | 2.9.1 | Következő feladatok sáv: a határidő-címke a szöveg fölött, hosszú szöveg két sorra vágva (teljes szöveg a súgóban) |
 | 2.9.0 | Live Desk: munkaidő-mérés (`munkamenetek.csv`), élő sáv, alvás/óraugrás-ellenőrzés, mért idő a statisztikában |
 | 2.8.0 | Előzmények: `tortenet.csv`, feladatonkénti idővonal és napi napló |
 | 2.7.0 | Moduláris forrás (`src/`), egyfájlos build (esbuild); a működés változatlan |
 | 2.6.1 | Szigorúbb dátum- és időellenőrzés (feb. 31., szökőév, óra/perc tartomány) |
-| 2.6 | Összecsukható napok (alapból csak a mai nyitott) |
+| 2.6 | Összecsukható napok (akkor alapból csak a mai nyitott; 2.9.2 óta a megoldatlan feladatos napok is) |
 | 2.5 | Tároló: nem ütemezett feladatok, `tarolo` oszlop |
 | 2.4 | Heti és havi áttekintés újratervezve, többsoros határidő-lista |
 | 2.3 | Napi státusz lapos sávban felül, heti/havi/megbízói blokk alul, kiemelt felviteli űrlap |
