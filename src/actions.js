@@ -5,14 +5,18 @@ import { render } from './render.js';
 import { $, st, ui } from './state.js';
 import { toast } from './status.js';
 import { queueSave } from './storage.js';
-import { dstr, pad, stamp } from './util.js';
+import { dstr, pad, stampAt } from './util.js';
+import { stopForTask } from './worktime.js';
 
 /* ---------- műveletek ---------- */
 export function updateTask(id, patch){
   const t = st.tasks.find(x => x.id === id); if (!t) return;
-  Object.assign(t, patch, { modositva: stamp() });
-  if (patch.statusz !== undefined) t.lezarva = patch.statusz === 'kesz' ? stamp() : '';
-  queueSave(); render();
+  const nowMs = Date.now(), ts = stampAt(nowMs);
+  Object.assign(t, patch, { modositva: ts });
+  if (patch.statusz !== undefined) t.lezarva = patch.statusz === 'kesz' ? ts : '';
+  // az éppen mért feladat lezárása / Tárolóba tétele: a munkamenet szabályosan lezárul (a lezárás ideje = a lezarva időbélyeg)
+  const ended = (patch.statusz === 'kesz' || patch.tarolo === 'igen') && stopForTask(st.sessions, id, nowMs, patch.statusz === 'kesz' ? 'kesz' : 'tarolo');
+  queueSave(); if (ended) queueSave('s'); render();
 }
 
 export function startEdit(id){
@@ -24,7 +28,8 @@ export function deleteTask(id){
   const t = st.tasks.find(x => x.id === id); if (!t) return;
   if (!confirm('Biztosan törlöd ezt a tételt?\n\n' + t.feladat.slice(0, 140))) return;
   st.tasks = st.tasks.filter(x => x !== t); st.deleted.add(id); st.editing = null;
-  queueSave(); render();
+  const ended = stopForTask(st.sessions, id, Date.now(), 'torles');
+  queueSave(); if (ended) queueSave('s'); render();
   toast('Törölve.', 'Visszavonás', () => { st.tasks.push(t); st.deleted.delete(id); queueSave(); render(); });
 }
 

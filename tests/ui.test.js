@@ -60,7 +60,7 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   await page.evaluateOnNewDocument(MOCK);
   // rögzített "ma": a tesztadatok 2026-11-09-re szólnak, az óra innen halad tovább
   const OFFSET = new Date('2026-11-09T13:44:00').getTime() - Date.now();
-  await page.evaluateOnNewDocument(off => { const R = Date; class D extends R { constructor(...a){ if (a.length) super(...a); else super(R.now() + off); } static now(){ return R.now() + off; } } window.Date = D; }, OFFSET);
+  await page.evaluateOnNewDocument(off => { const R = Date; class D extends R { constructor(...a){ if (a.length) super(...a); else super(R.now() + off + (window.__skew || 0)); } static now(){ return R.now() + off + (window.__skew || 0); } } window.Date = D; }, OFFSET);
   await page.goto(HTML);
   await page.evaluate(l => window.__put('feladatnaplo.csv', l), PASTED);
 
@@ -242,7 +242,7 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   // 7) dashboard: panelek, lapozás, elrejtés
   assert.strictEqual(await page.$$eval('#dash .panel', e => e.length), 2);
   assert((await page.$eval('#today .ring-svg', e => e.textContent)).includes('/'));
-  assert.strictEqual(await page.$$eval('#today .num', e => e.length), 5, 'öt napi szám');
+  assert.strictEqual(await page.$$eval('#today .num', e => e.length), 6, 'hat napi szám (az utolsó a mért idő)');
   assert(await page.evaluate(() => document.querySelector('#overview').compareDocumentPosition(document.querySelector('#list')) & Node.DOCUMENT_POSITION_PRECEDING), 'áttekintés a lista alatt');
   assert(await page.evaluate(() => document.querySelector('#today').compareDocumentPosition(document.querySelector('#list')) & Node.DOCUMENT_POSITION_FOLLOWING), 'napi sáv a lista felett');
   const wk = await page.$eval('#dash .panel:nth-child(1) .rng', e => e.textContent);
@@ -408,6 +408,86 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   await page.keyboard.type('Extra'); assert.strictEqual(await page.$$eval('#list .task', e => e.length), 1);
   await page.keyboard.press('Escape'); assert.strictEqual(await page.$eval('#q', e => e.value), '', 'Esc törli a keresést');
   assert.strictEqual(await page.$$eval('#list .task', e => e.length), nTasks);
+
+  // 13) Live Desk: munka indítása, váltás, szünet, folytatás, befejezés (a végén, hogy a korábbi lépések számait ne érintse)
+  // az újratöltés óta a mappa nincs csatlakoztatva: a helyi adatokat megőrizve (offline jelző) csatlakozunk újra
+  await page.evaluate(() => localStorage.setItem('feladatnaplo.v1.offline', '1'));
+  await page.click('#btnFolder');
+  await page.waitForFunction(() => document.querySelector('#pill').className.includes('ok'), { timeout: 4000 });
+  await sleep(500);
+  assert((await page.evaluate(() => window.__text('munkamenetek.csv'))).startsWith('\uFEFFid;feladat_id;kezdet;veg;idotartam_mp;ok'), 'a munkamenetek.csv létrejött fejléccel');
+  const sessCsv = () => page.evaluate(() => window.__text('munkamenetek.csv'));
+  for (const [txt, due] of [['LD teszt A', 3*3600e3], ['LD teszt B', 0]]) {
+    await page.type('#fText', txt);
+    if (due) await page.$eval('#fDue', (e, v) => { e.value = v; }, await iso(due));
+    await page.click('#addForm .primary'); await sleep(150);
+  }
+  assert.strictEqual(await page.$eval('#today .ld', e => e.classList.contains('off')), true, 'nincs aktív feladat: egyértelmű jelzés');
+  assert((await page.$eval('#today .ld', e => e.textContent)).includes('Nincs aktív feladat'));
+  const idOf = txt => page.evaluate(t => [...document.querySelectorAll('#list .task')].find(li => li.textContent.includes(t)).dataset.id, txt);
+  const idA = await idOf('LD teszt A'), idB = await idOf('LD teszt B');
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idA);
+  await page.waitForSelector('#today .ld.on');
+  assert((await page.$eval('#today .ld', e => e.textContent)).includes('LD teszt A'), 'az aktív feladat a Live Desken');
+  assert.strictEqual(await page.$$eval('#list .task.working', e => e.length), 1, 'az aktív sor kiemelve');
+  assert.strictEqual(await page.$eval(`#list [data-id="${idA}"] .go-b`, e => e.dataset.act), 'pause', 'az aktív soron szünet gomb');
+  assert.strictEqual(await page.$eval(`#list [data-id="${idA}"] .dl, #list [data-id="${idA}"] .chip.dl`, e => !!e), true, 'a határidő a helyén marad');
+  await sleep(1300);
+  assert(await page.$eval('#ldSess', e => e.textContent !== '00:00:00'), 'a számláló halad (a kezdetből számolva)');
+  await sleep(500);
+  let sc = await sessCsv();
+  assert(new RegExp(idA + ';\\d{4}-\\d\\d-\\d\\dT[\\d:]+;;;\\r?\\n').test(sc), 'a futó munkamenet tartósan mentve (üres veg): ' + sc);
+  await (await page.$('#today')).screenshot({ path: path.resolve(OUT, 'shot-livedesk.png') });
+  // váltás: megerősítés nélkül, a régi lezárul (valtas), az új indul
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idB);
+  await page.waitForFunction(id => document.querySelector(`#list [data-id="${id}"]`).classList.contains('working'), {}, idB);
+  assert.strictEqual(await page.$$eval('#list .task.working', e => e.length), 1, 'egyszerre egy aktív');
+  assert((await page.$eval('#toast', e => e.textContent)).includes('Váltás'), 'váltás visszajelzése');
+  await sleep(600);
+  sc = await sessCsv();
+  assert(new RegExp(idA + ';[^;]+;[^;]+;\\d+;valtas').test(sc), 'a régi munkamenet valtas okkal lezárva: ' + sc);
+  assert.strictEqual((sc.match(/;;;\r?\n/g) || []).length, 1, 'pontosan egy nyitott sor');
+  // szünet a Live Deskről: a feladat nyitott marad
+  await page.click('#today [data-live="pause"]');
+  await page.waitForSelector('#today .ld.off');
+  assert.strictEqual(await page.$eval(`#list [data-id="${idB}"]`, e => e.classList.contains('done')), false, 'szünet után a feladat nyitott');
+  assert((await page.$eval('#toast', e => e.textContent)).includes('Szüneteltetve'));
+  await sleep(600);
+  assert(new RegExp(idB + ';[^;]+;[^;]+;\\d+;szunet').test(await sessCsv()), 'szunet ok');
+  // folytatás: ugyanazon a feladaton új munkamenet
+  await page.click('#today .ld-go');
+  await page.waitForSelector('#today .ld.on');
+  assert.strictEqual(await page.$eval(`#list [data-id="${idB}"]`, e => e.classList.contains('working')), true);
+  // befejezés a Live Deskről: kész, lezarva, a munkamenet ok=kesz, a korábbiak megmaradnak
+  await page.click('#today [data-live="finish"]');
+  await page.waitForSelector('#today .ld.off');
+  assert.strictEqual(await page.$eval(`#list [data-id="${idB}"]`, e => e.classList.contains('done')), true, 'a feladat kész');
+  await sleep(700);
+  sc = await sessCsv();
+  assert(new RegExp(idB + ';[^;]+;[^;]+;\\d+;kesz').test(sc) && (sc.match(new RegExp(idB + ';', 'g')) || []).length === 2, 'két munkamenet ugyanahhoz a feladathoz, az utolsó kesz: ' + sc);
+  assert(new RegExp(idB + ';[^\\n]*?;\\d{4}-\\d\\d-\\d\\dT[\\d:]+;\\d{4}-\\d\\d-\\d\\dT[\\d:]+;[^\\n]*;nyitott').test(await page.evaluate(() => window.__text('feladatnaplo.csv'))) === false, 'a feladat már nem nyitott a CSV-ben');
+  // a hagyományos listában kész-re jelölt aktív feladat: az időmérés szabályosan leáll
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idA);
+  await page.waitForSelector('#today .ld.on');
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] .chk`).click(), idA);
+  await page.waitForSelector('#today .ld.off');
+  await sleep(700);
+  sc = await sessCsv();
+  assert((sc.match(new RegExp(idA + ';[^;]+;[^;]+;\\d+;kesz', 'g')) || []).length === 1, 'listabeli pipa lezárta az aktív munkamenetet: ' + sc);
+  assert.strictEqual((sc.match(/;;;\r?\n/g) || []).length, 0, 'nincs nyitva maradt munkamenet');
+  // újranyitás: a korábbi munkamenetek megmaradnak
+  const before = (await sessCsv()).split('\n').length;
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] .chk`).click(), idA);
+  await sleep(500);
+  assert.strictEqual((await sessCsv()).split('\n').length, before, 'újranyitás nem töröl munkamenetet');
+  // oldalfrissítés: a futó munkamenet helyreáll (helyi tükörből)
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idA);
+  await page.waitForSelector('#today .ld.on');
+  await sleep(300);
+  await page.reload();
+  await page.waitForSelector('#today .ld.on', { timeout: 4000 });
+  assert((await page.$eval('#today .ld', e => e.textContent)).includes('LD teszt A'), 'frissítés után is az aktív feladat látszik');
+  assert.strictEqual(await page.$$eval('#list .task.working', e => e.length), 1);
 
   assert.deepStrictEqual(errors, [], 'nincs JS hiba: ' + errors.join(' | '));
   console.log('UI teszt rendben ✔');

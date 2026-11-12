@@ -2,9 +2,10 @@
 import { dayLabel, fmtText, hl, matches, queryTerms } from './filter.js';
 import { fmtWhen, timelineFor } from './history.js';
 import { renderPark } from './park.js';
-import { $, ICON_CLOCK, ICON_USER, esc, isDone, st, ui } from './state.js';
+import { $, ICON_CLOCK, ICON_PAUSE, ICON_PLAY, ICON_USER, esc, isDone, live, st, ui } from './state.js';
 import { cmpTasks, dueInfo, isParked } from './tasks.js';
 import { todayStr } from './util.js';
+import { activeOf, capOf, durMs, fmtHMS } from './worktime.js';
 
 /* ---------- lista ---------- */
 export function viewRow(t, terms, now){
@@ -12,12 +13,15 @@ export function viewRow(t, terms, now){
   const tip = [t.letrehozva && 'Rögzítve: ' + t.letrehozva.replace('T',' '),
                t.modositva && t.modositva !== t.letrehozva && 'Módosítva: ' + t.modositva.replace('T',' '),
                t.lezarva && 'Lezárva: ' + t.lezarva.replace('T',' ')].filter(Boolean).join('\n');
-  const cls = 'task' + (done ? ' done' : '') + (di && !done ? ' st-' + di.state : '');
+  const act = activeOf(st.sessions), working = !!act && act.feladat_id === t.id && !done;
+  const cls = 'task' + (done ? ' done' : '') + (di && !done ? ' st-' + di.state : '') + (working ? ' working' : '');
   return `<li class="${cls}" data-id="${esc(t.id)}">
     <input type="checkbox" class="chk" data-act="toggle" ${done?'checked':''} aria-label="Kész">
-    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megbízó – kattintásra szűrés">${ICON_USER}${hl(t.megbizo, terms.filter(x => x[0] !== '@' && x[0] !== '#'))}</button>` : ''}</div>
+    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${working ? `<span class="chip wk" data-lt title="Folyamatban lévő munkamenet">${fmtHMS(durMs(act, now, capOf(live.gap)))}</span>` : ''}${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megbízó – kattintásra szűrés">${ICON_USER}${hl(t.megbizo, terms.filter(x => x[0] !== '@' && x[0] !== '#'))}</button>` : ''}</div>
     ${di ? `<span class="chip dl ${di.state}" title="Határidő: ${esc(t.hatarido.replace('T',' '))}">${ICON_CLOCK}${esc(di.label)}</span>` : ''}
-    <span class="acts">${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkesztés" aria-label="Szerkesztés">✎</button></span></li>`;
+    <span class="acts">${done ? '' : working
+      ? `<button type="button" class="icon go-b on" data-act="pause" title="Szüneteltetés" aria-label="Szüneteltetés">${ICON_PAUSE}</button>`
+      : `<button type="button" class="icon go-b" data-act="start" title="Munka indítása" aria-label="Munka indítása">${ICON_PLAY}</button>`}${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkesztés" aria-label="Szerkesztés">✎</button></span></li>`;
 }
 
 /* ---------- előzmények ---------- */

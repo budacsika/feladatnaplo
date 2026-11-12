@@ -1,8 +1,10 @@
 // Napi sáv, heti/havi irányítópult és diagramok
 import { $, ICON_CLOCK, esc, isDone, ov, st } from './state.js';
+import { liveBar, nextRow, nextTasks, todayWorkMs } from './livedesk.js';
 import { periodStats } from './stats.js';
 import { TAG_RE, dueInfo, isParked } from './tasks.js';
 import { fmtDur, isoWeek, monthDays, todayStr, weekDays } from './util.js';
+import { activeOf, fmtWork } from './worktime.js';
 
 /* ---------- dashboard ---------- */
 export function urgency(now = Date.now()){
@@ -116,7 +118,8 @@ export function renderToday(){
   const np = st.tasks.filter(isParked).length;
   const closedToday = st.tasks.filter(t => t.lezarva && t.lezarva.slice(0,10) === today).length;
   const MAXAL = 6;
-  const al = u.list.slice(0, MAXAL).map(({t, di}) => `<button type="button" class="al ${di.state}" data-goto="${esc(t.id)}"><span class="chip dl ${di.state}" style="grid-area:auto">${ICON_CLOCK}${esc(di.label)}</span><span class="at">${esc(t.feladat.replace(TAG_RE, '').trim() || t.feladat)}</span></button>`).join('');
+  const act = activeOf(st.sessions), nxt = nextTasks(now, act && act.feladat_id), wk = todayWorkMs(now);
+  const al = nxt.slice(0, MAXAL).map(nextRow).join('');
   box.innerHTML = `<div class="tf">
     <div class="tf-l">
       <div class="ring">${ringSVG(done, tt.length)}</div>
@@ -128,13 +131,14 @@ export function renderToday(){
           <div class="num"><b class="${u.over ? 'c-red' : 'dim'}">${u.over}</b><span class="cap">lejárt</span></div>
           <div class="num"><b class="${older ? 'c-orange' : 'dim'}">${older}</b><span class="cap">régebbi nyitott</span></div>
           <div class="num"><b class="${closedToday ? 'c-cyan' : 'dim'}">${closedToday}</b><span class="cap">ma lezárva</span></div>
+          <div class="num"><b class="${wk ? 'c-cyan' : 'dim'}" id="ldToday">${fmtWork(wk)}</b><span class="cap">mért idő ma</span></div>
         </div>
       </div>
     </div>
     <div class="tf-r">
-      <div class="tf-rh"><span class="cap">Határidők · lejárt, ≤2 óra, ma</span><button type="button" class="mini park-j" data-jump="park" title="Nem ütemezett feladatok (nem számítanak a statisztikába)">Tároló (${np}) ↓</button><button type="button" class="mini" data-jump="overview" title="Heti, havi és megbízói statisztika az oldal alján">hét · hónap · megbízók ↓</button></div>
-      ${al ? `<div class="tf-al">${al}</div>` : '<div class="sm dim">Nincs közelgő határidő.</div>'}${u.list.length > MAXAL ? `<div class="sm dim">+ ${u.list.length - MAXAL} további</div>` : ''}
-    </div></div>`;
+      <div class="tf-rh"><span class="cap">Következő feladatok · határidő szerint</span><button type="button" class="mini park-j" data-jump="park" title="Nem ütemezett feladatok (nem számítanak a statisztikába)">Tároló (${np}) ↓</button><button type="button" class="mini" data-jump="overview" title="Heti, havi és megbízói statisztika az oldal alján">hét · hónap · megbízók ↓</button></div>
+      ${al ? `<div class="tf-al">${al}</div>` : '<div class="sm dim">Nincs nyitott feladat.</div>'}${nxt.length > MAXAL ? `<div class="sm dim">+ ${nxt.length - MAXAL} további</div>` : ''}
+    </div></div>${liveBar(now)}`;
 }
 
 export function renderDash(){

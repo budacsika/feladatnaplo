@@ -2,9 +2,10 @@
 import { logChanges, resetSnap } from './audit.js';
 import { detectDelimiter, parseCSV, rowsToTasks, toCSV } from './csv.js';
 import { histToCSV, mergeHistory, parseHistory } from './history.js';
+import { mergeSessions, parseSessions, sessionsToCSV } from './worktime.js';
 import { mergePeopleInto, parsePeople, peopleToCSV, reconcilePeople, seedPeople } from './people-model.js';
 import { render } from './render.js';
-import { BACKUP_DIR, BACKUP_KEEP, DB_NAME, FILE_NAME, HIST_FILE, LS, LS_H, LS_OFF, LS_P, PEOPLE_FILE, STORE, ov, st } from './state.js';
+import { BACKUP_DIR, BACKUP_KEEP, DB_NAME, FILE_NAME, HIST_FILE, LS, LS_H, LS_OFF, LS_P, LS_S, PEOPLE_FILE, SESS_FILE, STORE, ov, st } from './state.js';
 import { renderStatus, toast } from './status.js';
 import { mergeInto } from './tasks.js';
 import { pad, todayStr } from './util.js';
@@ -20,6 +21,7 @@ export const idbSet = async (k, v) => { const db = await idb(); return new Promi
 export const persistLocal = () => {
   try { localStorage.setItem(LS, toCSV(st.tasks)); localStorage.setItem(LS_P, peopleToCSV(st.people)); } catch {}
   try { localStorage.setItem(LS_H, histToCSV(st.hist)); } catch {}   // külön: ha a napló miatt betelne a tár, a feladatok ettől még mentődnek
+  try { localStorage.setItem(LS_S, sessionsToCSV(st.sessions)); } catch {}   // a futó munkamenet is: oldalfrissítés / összeomlás után innen áll helyre
 };
 
 export const loadMirror = () => {
@@ -28,6 +30,7 @@ export const loadMirror = () => {
     const rp = localStorage.getItem(LS_P); st.people = rp ? parsePeople(rp) : seedPeople(st.tasks);
     reconcilePeople(st.tasks, st.people);
     const rh = localStorage.getItem(LS_H); st.hist = rh ? parseHistory(rh) : [];
+    const rs = localStorage.getItem(LS_S); st.sessions = rs ? parseSessions(rs).sessions : [];
   } catch {}
   resetSnap();
 };
@@ -67,8 +70,8 @@ export async function dailyBackup(raw, prefix = 'feladatnaplo'){
 }
 
 // szerkezet-átalakítás előtt külön másolat az éppen aktuális fájlról (a napi mentés lehet, hogy régebbi állapotot őriz)
-export async function schemaBackup(raw){
-  const n = new Date(), name = `feladatnaplo_${todayStr()}_${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}_atalakitas-elott.csv`;
+export async function schemaBackup(raw, prefix = 'feladatnaplo', tag = 'atalakitas-elott'){
+  const n = new Date(), name = `${prefix}_${todayStr()}_${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}_${tag}.csv`;
   await writeTo(await backupDir(), name, '﻿' + raw);
 }
 
@@ -78,6 +81,7 @@ export async function openFolder(){
     st.fh = await st.dir.getFileHandle(FILE_NAME, { create:true });
     st.fhP = await st.dir.getFileHandle(PEOPLE_FILE, { create:true });
     st.fhH = await st.dir.getFileHandle(HIST_FILE, { create:true });
+    st.fhS = await st.dir.getFileHandle(SESS_FILE, { create:true });
     const file = await st.fh.getFile();
     st.lastMod = file.lastModified;
     const raw = await decodeFile(file);
@@ -97,6 +101,15 @@ export async function openFolder(){
     const rawH = await decodeFile(fileH);
     if (rawH.trim()) await dailyBackup(rawH, 'tortenet');
     mergeHistory(st.hist, parseHistory(rawH));                            // az előzmények sosem vesznek el: lemezen lévő + helyi események uniója
+    const fileS = await st.fhS.getFile();
+    st.lastModS = fileS.lastModified;
+    const rawS = await decodeFile(fileS), pS = parseSessions(rawS);
+    st.sessBlocked = pS.blocked;                                           // ismeretlen tartalom: nem nyúlunk hozzá (az időmérés a böngészőben megy tovább)
+    if (!pS.blocked) {
+      if (rawS.trim()) await dailyBackup(rawS, 'munkamenetek');
+      if (pS.bad || pS.fixed) await schemaBackup(rawS, 'munkamenetek', 'javitas-elott');   // hibás sor sosem vész el: javítás előtt külön másolat
+      mergeSessions(st.sessions, pS.sessions);                              // a munkamenetek is unióval egyesülnek (helyi tükör + lemez)
+    }
     const off = getOffline();
     if (off) { mergeInto(st.tasks, disk, st.deleted); mergePeopleInto(st.people, diskP || [], st.deletedP); }
     else { st.tasks = disk; st.people = diskP || seedPeople(disk); }
@@ -109,9 +122,12 @@ export async function openFolder(){
     if (needT) st.dirty = true;
     if (needP) st.dirtyP = true;
     if (rawH !== histToCSV(st.hist).slice(1)) st.dirtyH = true;
-    if (needT || needP || st.dirtyH) await flush(); else st.savedAt = new Date();
+    if (!st.sessBlocked && rawS !== sessionsToCSV(st.sessions).slice(1)) st.dirtyS = true;
+    if (needT || needP || st.dirtyH || st.dirtyS) await flush(); else st.savedAt = new Date();
     const msg = [];
     if (kind === 'v1' || kind === 'v0') msg.push('A CSV átalakítva az új szerkezetre. Az eredeti a „mentesek” mappában van.');
+    if (st.sessBlocked) msg.push('A munkamenetek.csv ismeretlen formátumú, nem írom felül. Az időmérés addig csak a böngészőben tárolódik.');
+    else if (pS.bad || pS.fixed) msg.push(`A munkamenetek.csv ${pS.bad + pS.fixed} sorát javítani kellett; az eredeti a „mentesek” mappában van.`);
     if (!diskP && st.people.length) msg.push(`Megbízók lista létrehozva a feladatokból: ${st.people.length} név (megbizok.csv).`);
     else if (rec.added.length) msg.push(`${rec.added.length} új megbízó felkerült a listára.`);
     if (msg.length) toast(msg.join(' '));
@@ -136,9 +152,9 @@ export async function reconnect(){
   } catch (e) { st.err = e; renderStatus(); }
 }
 
-export function queueSave(kind){                                              // kind: 'p' = csak a megbízók listája
+export function queueSave(kind){                                              // kind: 'p' = csak a megbízók listája, 's' = csak a munkamenetek
   logChanges();                                                               // mi változott a feladatokban → előzmény-események
-  if (kind === 'p') st.dirtyP = true; else st.dirty = true;
+  if (kind === 'p') st.dirtyP = true; else if (kind === 's') { if (!st.sessBlocked) st.dirtyS = true; } else st.dirty = true;
   persistLocal();
   if (st.mode !== 'folder') setOffline(true);
   renderStatus();
@@ -159,9 +175,14 @@ export async function flush(){
   if (st.mode !== 'folder' || st.saving) { renderStatus(); return; }
   st.saving = true; st.err = null; renderStatus();
   try {
-    while (st.dirty || st.dirtyP || st.dirtyH) {
+    while (st.dirty || st.dirtyP || st.dirtyH || st.dirtyS) {
       if (st.dirtyP) await flushAux('P', raw => mergePeopleInto(st.people, parsePeople(raw), st.deletedP), () => peopleToCSV(st.people));   // előbb a megbízók,
       if (st.dirtyH) await flushAux('H', raw => mergeHistory(st.hist, parseHistory(raw)), () => histToCSV(st.hist));                         // az előzmények (csak bővülnek),
+      if (st.dirtyS) {                                                      // munkamenetek: lezárt sor erősebb a nyitottnál; két nyitott közül a későbbi marad aktív
+        let changed = false;
+        await flushAux('S', raw => { const p = parseSessions(raw); if (!p.blocked && mergeSessions(st.sessions, p.sessions)) changed = true; }, () => sessionsToCSV(st.sessions));
+        if (changed) render();
+      }
       if (st.dirty) {
         st.dirty = false;
         const f = await st.fh.getFile();
@@ -177,14 +198,29 @@ export async function flush(){
     }
     st.savedAt = new Date(); setOffline(false);
   } catch (e) {
-    st.dirty = true; st.dirtyP = true; st.dirtyH = true; st.err = e;
+    st.dirty = true; st.dirtyP = true; st.dirtyH = true; st.dirtyS = !st.sessBlocked; st.err = e;
     if (e && e.name === 'NotAllowedError') st.mode = 'needperm';
     else st.retryTimer = setTimeout(flush, 15000);
   } finally { st.saving = false; renderStatus(); }
 }
 
+// Munkamenet-művelet előtt: ha egy másik fül/gép közben írt a fájlba, előbb egyesítünk (hogy ne régi nézetből dolgozzunk)
+export async function syncSessions(){
+  if (st.mode !== 'folder' || !st.fhS || st.sessBlocked || st.dirtyS || st.saving) return false;
+  try {
+    const f = await st.fhS.getFile();
+    if (f.lastModified === st.lastModS) return false;
+    st.lastModS = f.lastModified;
+    const rawS = await decodeFile(f), p = parseSessions(rawS);
+    if (p.blocked) return false;
+    const n = mergeSessions(st.sessions, p.sessions);
+    if (rawS !== sessionsToCSV(st.sessions).slice(1)) queueSave('s'); else if (n) persistLocal();
+    return n > 0;
+  } catch { return false; }
+}
+
 export async function checkExternal(){
-  if (st.mode !== 'folder' || st.dirty || st.dirtyP || st.dirtyH || st.saving || st.editing || ov.pEdit != null || !st.fh) return;
+  if (st.mode !== 'folder' || st.dirty || st.dirtyP || st.dirtyH || st.dirtyS || st.saving || st.editing || ov.pEdit != null || !st.fh) return;
   try {
     let changed = false;
     const f = await st.fh.getFile();
@@ -204,6 +240,17 @@ export async function checkExternal(){
       st.lastModH = fhh.lastModified;
       if (mergeHistory(st.hist, parseHistory(await decodeFile(fhh)))) changed = true;
     }
+    if (st.fhS) {
+      const fS = await st.fhS.getFile();
+      if (fS.lastModified !== st.lastModS) {
+        st.lastModS = fS.lastModified;
+        const rawS = await decodeFile(fS), pS = parseSessions(rawS);
+        if (!pS.blocked && mergeSessions(st.sessions, pS.sessions)) {
+          changed = true;
+          if (rawS !== sessionsToCSV(st.sessions).slice(1)) st.dirtyS = true;   // az egyesítés (pl. két aktív) kiírandó
+        }
+      }
+    }
     if (!changed) return;
     const rec = reconcilePeople(st.tasks, st.people);
     resetSnap();
@@ -211,6 +258,6 @@ export async function checkExternal(){
     if (rec.renamed) st.dirty = true;
     render(); persistLocal();
     toast('A fájl időközben változott – frissítettem.');
-    if (st.dirty || st.dirtyP) { renderStatus(); st.saveTimer = setTimeout(flush, 300); }
+    if (st.dirty || st.dirtyP || st.dirtyS) { renderStatus(); st.saveTimer = setTimeout(flush, 300); }
   } catch {}
 }

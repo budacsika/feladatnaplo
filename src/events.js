@@ -10,6 +10,7 @@ import { moveFromPark, sendToPark, setPark, setParkOpen } from './park.js';
 import { addPerson, removePerson, renamePerson, renderPeople } from './people.js';
 import { exactPerson, normName, pkey, reconcilePeople, suggestPeople } from './people-model.js';
 import { setJournal, setJournalDay, shiftJournal } from './journal.js';
+import { finishActive, pauseActive, startWorkOn } from './work.js';
 import { flash, render } from './render.js';
 import { $, LS_DASH, LS_PARK, LS_PPL, isDone, ov, st, ui } from './state.js';
 import { toast } from './status.js';
@@ -55,6 +56,8 @@ $('#dashToggle').addEventListener('click', () => { ov.hidden = !ov.hidden; try {
 $('#today').addEventListener('click', e => {
   const j = e.target.closest('[data-jump]');
   if (j) { if (j.dataset.jump === 'park' && !ov.park) setParkOpen(true); const el = document.getElementById(j.dataset.jump); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
+  const lv = e.target.closest('[data-live]');
+  if (lv) { const a = lv.dataset.live; if (a === 'start') startWorkOn(lv.dataset.id); else if (a === 'pause') pauseActive(); else if (a === 'finish') finishActive(); return; }
   const g = e.target.closest('[data-goto]');
   if (g) { resetFilters(); st.editing = null; renderList(); flash(g.dataset.goto); }
 });
@@ -95,6 +98,8 @@ list.addEventListener('click', e => {
   const li = b.closest('[data-id]'), id = li && li.dataset.id;
   switch (b.dataset.act) {
     case 'edit': startEdit(id); break;
+    case 'start': startWorkOn(id); break;
+    case 'pause': pauseActive(); break;
     case 'hist': ui.histOpen.has(id) ? ui.histOpen.delete(id) : ui.histOpen.add(id); renderList(); break;
     case 'cancel': st.editing = null; renderList(); break;
     case 'day': { const ds = b.dataset.day; ui.dayState.set(ds, b.getAttribute('aria-expanded') !== 'true'); renderList(); break; }

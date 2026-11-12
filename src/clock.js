@@ -1,4 +1,5 @@
 // Óra és percenkénti frissítés
+import { updateLive } from './livedesk.js';
 import { render } from './render.js';
 import { $, ov, st } from './state.js';
 import { pad } from './util.js';
@@ -9,6 +10,7 @@ let lastMinute = 0;
 export function tick(){
   const n = new Date();
   $('#clock').textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  updateLive(n.getTime());                                                  // a mért idő számlálói (a kezdetből számolva, nem növelt számláló)
   const mk = Math.floor(n.getTime() / 60000);
   if (mk !== lastMinute) {
     lastMinute = mk;

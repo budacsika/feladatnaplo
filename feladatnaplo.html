@@ -127,6 +127,13 @@ button{cursor:pointer}
 .al.over{border-left-color:var(--red)} .al.h1{border-left-color:var(--orange)} .al.h2{border-left-color:var(--gold)} .al.today{border-left-color:var(--cyan2)}
 .al .at{flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3;padding-top:1px}
 .al .chip{flex:none}
+.alr{display:flex;gap:2px;align-items:flex-start;min-width:0}
+.alr .al{flex:1;min-width:0;width:auto}
+.al.none{border-left-color:transparent}
+.chip.dl.none{color:var(--muted);background:transparent;border-color:var(--line)}
+.go{flex:none;width:24px;height:24px;margin-top:1px;border:1px solid var(--line);border-radius:2px;background:rgba(2,10,16,.6);color:var(--cyan);padding:0;display:grid;place-content:center}
+.go:hover{border-color:var(--cyan);background:rgba(53,224,255,.14);box-shadow:0 0 8px rgba(53,224,255,.35)}
+.go svg,.mini svg,.icon svg.fl{width:11px;height:11px;fill:currentColor;stroke:none;vertical-align:-1px}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
 .kv{font-size:20px;line-height:1.1;text-shadow:0 0 12px currentColor}
 .ovg{display:grid;gap:20px;align-items:stretch}
@@ -323,6 +330,27 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   h1{letter-spacing:.14em}
 }
 
+/* Live Desk: aktív munka sáv */
+.ld{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:12px;padding:8px 10px;border:1px solid var(--line);border-radius:3px;background:rgba(2,10,16,.45);font-size:13px}
+.ld.on{border-color:rgba(53,224,255,.55);background:linear-gradient(90deg,rgba(53,224,255,.12),rgba(53,224,255,.03));box-shadow:0 0 14px rgba(53,224,255,.12)}
+.ld.hold{border-color:rgba(255,194,51,.6);box-shadow:0 0 14px rgba(255,194,51,.12)}
+.ld-dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.ld.on .ld-dot{background:var(--cyan);box-shadow:0 0 9px var(--cyan);animation:pulse 1.8s infinite}
+.ld-tag{font:600 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)} .ld.on .ld-tag{color:var(--cyan)}
+.ld-t{font-size:20px;color:var(--cyan);text-shadow:0 0 12px rgba(53,224,255,.5);min-width:78px}
+.ld-name{flex:1 1 220px;min-width:0;color:var(--ink);font-weight:500;overflow-wrap:anywhere}
+.ld-sum{font-size:12px;color:var(--muted);white-space:nowrap} .ld-sum b{color:var(--ink);font-size:13px}
+.ld-act{display:flex;gap:6px;margin-left:auto}
+.ld-act .mini{padding:6px 12px;font-size:12px}
+.mini.ok{border-color:rgba(53,224,255,.5);color:var(--cyan)}
+.mini.ok:hover{background:rgba(53,224,255,.14)}
+.ld-hint{color:var(--dim);font-size:12px;flex:1 1 240px}
+.ld-go{margin-left:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.task.working{box-shadow:inset 3px 0 0 var(--cyan);background:linear-gradient(90deg,rgba(53,224,255,.14),transparent 60%)}
+.chip.wk{margin-left:8px;color:var(--cyan);border-color:rgba(53,224,255,.55);background:rgba(53,224,255,.1);font-family:var(--mono)}
+.icon.go-b{color:var(--cyan)}
+@media (max-width:620px){ .ld-t{font-size:18px} .ld-act{width:100%;margin-left:0} .ld-act .mini{flex:1} .ld-go{margin-left:0;width:100%} }
+
 /* előzmények (feladatonként) és napló */
 .acts{grid-area:edit;display:flex;gap:2px;align-items:flex-start}
 .acts .icon,.pk-act .icon{grid-area:auto}
@@ -352,7 +380,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   @page{margin:13mm}
   html{color-scheme:light}
   body{background:#fff!important;color:#111;font-size:10.5pt}
-  body::before,.top,.cmd,#today,#park,#journal,.hist,#overview,.dash,.dash-bar,.people,.ac,.filters,.foot,.icon,#toast,.meta{display:none!important}
+  body::before,.top,.cmd,#today,#park,#journal,.hist,.go-b,#overview,.dash,.dash-bar,.people,.ac,.filters,.foot,.icon,#toast,.meta{display:none!important}
   .print-head{display:block;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #111}
   .print-head h1{font-size:16pt;letter-spacing:.1em;text-shadow:none;color:#111}
   .print-head .pm{font:9pt var(--mono);color:#333;margin-top:2px}
@@ -500,6 +528,9 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   var HIST_FILE = "tortenet.csv";
   var LS_H = "feladatnaplo.v1.hist";
   var LS_JRN = "feladatnaplo.journal";
+  var SESS_FILE = "munkamenetek.csv";
+  var LS_S = "feladatnaplo.v1.sessions";
+  var LS_HB = "feladatnaplo.live.hb";
   var st = {
     tasks: [],
     deleted: /* @__PURE__ */ new Set(),
@@ -523,7 +554,13 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     hist: [],
     fhH: null,
     lastModH: 0,
-    dirtyH: false
+    dirtyH: false,
+    // hist: előzmény-események (tortenet.csv)
+    sessions: [],
+    fhS: null,
+    lastModS: 0,
+    dirtyS: false,
+    sessBlocked: false
   };
   var ui = { search: "", status: "all", period: "all", dayState: /* @__PURE__ */ new Map(), histOpen: /* @__PURE__ */ new Set() };
   var ov = { w: 0, m: 0, park: (() => {
@@ -556,6 +593,9 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   var ICON_USER = '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="4" r="2.2"/><path d="M1.8 11c.4-2.6 2.2-3.8 4.2-3.8s3.8 1.2 4.2 3.8"/></svg>';
   var ICON_CLOCK = '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.6"/><path d="M6 3.2V6l2 1.2"/></svg>';
   var isDone = (t) => t.statusz === "kesz";
+  var ICON_PLAY = '<svg viewBox="0 0 12 12" aria-hidden="true" class="fl"><path d="M3.4 2v8L10 6z"/></svg>';
+  var ICON_PAUSE = '<svg viewBox="0 0 12 12" aria-hidden="true" class="fl"><path d="M3 2h2.1v8H3zM6.9 2H9v8H6.9z"/></svg>';
+  var live = { gap: null };
 
   // src/util.js
   var pad = (n) => String(n).padStart(2, "0");
@@ -563,6 +603,10 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   var todayStr = () => dstr(/* @__PURE__ */ new Date());
   var stamp = () => {
     const d = /* @__PURE__ */ new Date();
+    return `${dstr(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  };
+  var stampAt = (ms) => {
+    const d = new Date(ms);
     return `${dstr(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
   };
   var seq = 0;
@@ -990,6 +1034,217 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     return out.sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
   }
 
+  // src/worktime.js
+  var SESS_HEADER = ["id", "feladat_id", "kezdet", "veg", "idotartam_mp", "ok"];
+  var SESS_OK = ["szunet", "valtas", "kesz", "tarolo", "torles"];
+  var SLEEP_MS = 5 * 6e4;
+  var DST_SLACK_S = 3700;
+  var str2 = (v) => String(v ?? "");
+  var isActive = (s) => !s.veg;
+  var activeOf = (list) => list.find(isActive) || null;
+  var startMs = (s) => toMs(s.kezdet);
+  var byStart = (a, b) => a.kezdet < b.kezdet ? -1 : a.kezdet > b.kezdet ? 1 : 0;
+  function spanOf(s, nowMs, capMs = Infinity) {
+    const a = startMs(s);
+    if (isNaN(a)) return null;
+    let b;
+    if (isActive(s)) b = Math.min(nowMs, capMs);
+    else {
+      const d = s.idotartam_mp === "" ? NaN : Number(s.idotartam_mp);
+      b = Number.isFinite(d) && d >= 0 ? a + d * 1e3 : toMs(s.veg);
+    }
+    if (isNaN(b)) return null;
+    return [a, Math.max(a, b)];
+  }
+  var durMs = (s, nowMs, capMs) => {
+    const x = spanOf(s, nowMs, capMs);
+    return x ? x[1] - x[0] : 0;
+  };
+  var workMsOfTask = (list, taskId, nowMs, capMs) => list.reduce((n, s) => n + (s.feladat_id === taskId ? durMs(s, nowMs, capMs) : 0), 0);
+  var dayBounds = (day) => {
+    const [y, m, d] = day.split("-").map(Number);
+    return [new Date(y, m - 1, d).getTime(), new Date(y, m - 1, d + 1).getTime()];
+  };
+  function workMsOn(list, day, nowMs, capMs) {
+    const [a, b] = dayBounds(day);
+    let sum = 0;
+    for (const s of list) {
+      const x = spanOf(s, nowMs, capMs);
+      if (!x) continue;
+      const lo = Math.max(a, x[0]), hi = Math.min(b, x[1]);
+      if (hi > lo) sum += hi - lo;
+    }
+    return sum;
+  }
+  function closeSession(s, endMs, ok) {
+    const a = startMs(s), end = isNaN(a) ? endMs : Math.max(endMs, a);
+    s.veg = stampAt(end);
+    s.idotartam_mp = String(isNaN(a) ? 0 : Math.round((end - a) / 1e3));
+    s.ok = ok;
+    return s;
+  }
+  function startWork(list, taskId, nowMs) {
+    const cur = activeOf(list);
+    if (cur && cur.feladat_id === taskId) return { started: null, closed: null, same: cur };
+    const closed = cur ? closeSession(cur, nowMs, "valtas") : null;
+    const started = { id: newId(), feladat_id: taskId, kezdet: stampAt(nowMs), veg: "", idotartam_mp: "", ok: "" };
+    list.push(started);
+    return { started, closed, same: null };
+  }
+  var pauseWork = (list, nowMs) => {
+    const cur = activeOf(list);
+    return cur ? closeSession(cur, nowMs, "szunet") : null;
+  };
+  var stopForTask = (list, taskId, nowMs, ok) => {
+    const cur = activeOf(list);
+    return cur && cur.feladat_id === taskId ? closeSession(cur, nowMs, ok) : null;
+  };
+  function normalizeActive(list) {
+    const act = list.filter(isActive).sort(byStart);
+    for (let i = 0; i < act.length - 1; i++) closeSession(act[i], startMs(act[i + 1]), "valtas");
+    return Math.max(0, act.length - 1);
+  }
+  var capOf = (gap) => gap ? Math.min(gap.fromMs, gap.toMs) : Infinity;
+  function sessionsToCSV(list) {
+    const lines = [SESS_HEADER.join(";")];
+    for (const s of [...list].sort(byStart)) lines.push(SESS_HEADER.map((k) => csvf(s[k])).join(";"));
+    return "\uFEFF" + lines.join("\r\n") + "\r\n";
+  }
+  function parseSessions(raw) {
+    const res = { sessions: [], bad: 0, fixed: 0, blocked: false };
+    const text = str2(raw).replace(/^﻿/, "");
+    if (!text.trim()) return res;
+    const rows = parseCSV(text, detectDelimiter(text));
+    const head = (rows[0] || []).map((c) => c.trim().toLowerCase()), col = (k) => head.indexOf(k);
+    if (col("id") < 0 || col("feladat_id") < 0 || col("kezdet") < 0) {
+      res.blocked = true;
+      res.bad = Math.max(0, rows.length - 1);
+      return res;
+    }
+    const g = (r, k) => col(k) >= 0 && r[col(k)] !== void 0 ? str2(r[col(k)]) : "";
+    const byId = /* @__PURE__ */ new Map();
+    for (const r of rows.slice(1)) {
+      if (r.every((c) => !str2(c).trim())) continue;
+      const id = g(r, "id").trim(), fid = g(r, "feladat_id").trim(), k = normStamp(g(r, "kezdet"));
+      if (!id || !fid || k.length < 16) {
+        res.bad++;
+        continue;
+      }
+      const vraw = g(r, "veg").trim(), v = vraw ? normStamp(vraw) : "";
+      if (vraw && v.length < 16) {
+        res.bad++;
+        continue;
+      }
+      const s = { id, feladat_id: fid, kezdet: k, veg: v, idotartam_mp: "", ok: "" };
+      if (v) {
+        const a = toMs(k), b = toMs(v);
+        if (b < a) {
+          res.bad++;
+          continue;
+        }
+        const dRaw = g(r, "idotartam_mp").trim(), derived = Math.round((b - a) / 1e3);
+        if (/^\d+$/.test(dRaw) && Math.abs(+dRaw - derived) <= DST_SLACK_S) s.idotartam_mp = String(+dRaw);
+        else {
+          s.idotartam_mp = String(derived);
+          if (dRaw !== "") res.fixed++;
+        }
+        const ok = g(r, "ok").trim();
+        if (SESS_OK.includes(ok)) s.ok = ok;
+        else {
+          s.ok = "szunet";
+          res.fixed++;
+        }
+      } else if (g(r, "ok").trim() || g(r, "idotartam_mp").trim()) res.fixed++;
+      const dup = byId.get(id);
+      if (dup) {
+        res.bad++;
+        if (isActive(dup) && !isActive(s)) Object.assign(dup, s);
+        continue;
+      }
+      byId.set(id, s);
+      res.sessions.push(s);
+    }
+    res.fixed += normalizeActive(res.sessions);
+    res.sessions.sort(byStart);
+    return res;
+  }
+  function mergeSessions(target, incoming) {
+    const map = new Map(target.map((s) => [s.id, s]));
+    let n = 0;
+    for (const s of incoming) {
+      const m = map.get(s.id);
+      if (!m) {
+        const c = { ...s };
+        target.push(c);
+        map.set(c.id, c);
+        n++;
+      } else if (isActive(m) && !isActive(s) || !isActive(m) && !isActive(s) && s.veg > m.veg) {
+        Object.assign(m, s);
+        n++;
+      }
+    }
+    n += normalizeActive(target);
+    if (n) target.sort(byStart);
+    return n;
+  }
+  var p2 = (n) => String(n).padStart(2, "0");
+  var fmtHMS = (ms) => {
+    const t = Math.max(0, Math.floor(ms / 1e3));
+    return `${p2(Math.floor(t / 3600))}:${p2(Math.floor(t / 60) % 60)}:${p2(t % 60)}`;
+  };
+  var fmtWork = (ms) => {
+    const m = Math.round(Math.max(0, ms) / 6e4);
+    return m < 60 ? `${m} p` : `${Math.floor(m / 60)} \xF3 ${p2(m % 60)} p`;
+  };
+
+  // src/livedesk.js
+  var shortText = (t) => t.feladat.replace(TAG_RE, "").trim() || t.feladat;
+  var mdShort = (ds) => ds === todayStr() ? "ma" : ds.slice(5).replace("-", ".") + ".";
+  var todayWorkMs = (now = Date.now()) => workMsOn(st.sessions, todayStr(), now, capOf(live.gap));
+  function lastWorked() {
+    const done = st.sessions.filter((s) => s.veg).sort((a, b) => a.veg < b.veg ? 1 : a.veg > b.veg ? -1 : 0);
+    for (const s of done) {
+      const t = st.tasks.find((x) => x.id === s.feladat_id);
+      if (t && !isDone(t) && !isParked(t)) return t;
+    }
+    return null;
+  }
+  function nextTasks(now = Date.now(), activeId = null) {
+    const rows = [];
+    for (const t of st.tasks) {
+      if (isDone(t) || isParked(t) || t.id === activeId) continue;
+      const di = dueInfo(t, now);
+      rows.push({ t, di, rank: di ? 0 : 1, key: di ? di.due : 0 });
+    }
+    return rows.sort((a, b) => a.rank - b.rank || a.key - b.key || (a.t.datum < b.t.datum ? -1 : a.t.datum > b.t.datum ? 1 : 0) || (a.t.letrehozva || "").localeCompare(b.t.letrehozva || ""));
+  }
+  function nextRow({ t, di }) {
+    const chip = di ? `<span class="chip dl ${di.state}" style="grid-area:auto">${ICON_CLOCK}${esc(di.label)}</span>` : `<span class="chip dl none" style="grid-area:auto">${esc(mdShort(t.datum))}</span>`;
+    return `<div class="alr"><button type="button" class="go" data-live="start" data-id="${esc(t.id)}" title="Munka ind\xEDt\xE1sa" aria-label="Munka ind\xEDt\xE1sa">${ICON_PLAY}</button><button type="button" class="al ${di ? di.state : "none"}" data-goto="${esc(t.id)}">${chip}<span class="at">${esc(shortText(t))}</span></button></div>`;
+  }
+  function liveBar(now = Date.now()) {
+    const a = activeOf(st.sessions), cap = capOf(live.gap);
+    if (!a) {
+      const last = lastWorked();
+      return `<div class="ld off"><i class="ld-dot"></i><span class="ld-tag">Nincs akt\xEDv feladat</span><span class="ld-hint">Ind\xEDts munk\xE1t a \u25B6 gombbal a list\xE1ban vagy a k\xF6vetkez\u0151 feladatok k\xF6z\xF6tt.</span>` + (last ? `<button type="button" class="mini ld-go" data-live="start" data-id="${esc(last.id)}" title="Munka folytat\xE1sa ezen a feladaton">${ICON_PLAY} Folytat\xE1s: ${esc(shortText(last).slice(0, 40))}</button>` : "") + `</div>`;
+    }
+    const t = st.tasks.find((x) => x.id === a.feladat_id), di = t ? dueInfo(t, now) : null;
+    const sess = fmtHMS(durMs(a, now, cap)), tot = fmtWork(workMsOfTask(st.sessions, a.feladat_id, now, cap));
+    return `<div class="ld on${live.gap ? " hold" : ""}"><i class="ld-dot"></i><span class="ld-tag">Akt\xEDv</span><b class="ld-t mono" id="ldSess" title="Az aktu\xE1lis munkamenet ideje">${sess}</b><span class="ld-name" title="${esc(t ? t.feladat : "")}">${esc(t ? shortText(t) : "(t\xF6r\xF6lt feladat)")}</span>` + (t && t.megbizo ? `<span class="chip who" style="grid-area:auto">${ICON_USER}${esc(t.megbizo)}</span>` : "") + (di ? `<span class="chip dl ${di.state}" style="grid-area:auto" title="Hat\xE1rid\u0151: ${esc(t.hatarido.replace("T", " "))}">${ICON_CLOCK}${esc(di.label)}</span>` : "") + `<span class="ld-sum" title="A feladatra \xF6sszesen ford\xEDtott id\u0151 (az \xF6sszes munkamenet)">\u03A3 <b class="mono" id="ldTotal">${tot}</b></span><span class="ld-act"><button type="button" class="mini" data-live="pause" title="Sz\xFCneteltet\xE9s: a munkamenet lez\xE1rul, a feladat nyitott marad">${ICON_PAUSE} Sz\xFCnet</button><button type="button" class="mini ok" data-live="finish" title="Befejez\xE9s: a feladat k\xE9sz lesz, a m\xE9rt id\u0151 megmarad">\u2713 K\xE9sz</button></span></div>`;
+  }
+  function updateLive(now = Date.now()) {
+    const a = activeOf(st.sessions), cap = capOf(live.gap);
+    const s = $("#ldSess");
+    if (s && a) s.textContent = fmtHMS(durMs(a, now, cap));
+    const t = $("#ldTotal");
+    if (t && a) t.textContent = fmtWork(workMsOfTask(st.sessions, a.feladat_id, now, cap));
+    const d = $("#ldToday");
+    if (d) d.textContent = fmtWork(todayWorkMs(now));
+    if (a) document.querySelectorAll("[data-lt]").forEach((el) => {
+      el.textContent = fmtHMS(durMs(a, now, cap));
+    });
+  }
+
   // src/people-model.js
   var normName = (s) => String(s || "").replace(/\s+/g, " ").trim();
   var pkey = (s) => fold(normName(s));
@@ -1278,7 +1533,8 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     const np = st.tasks.filter(isParked).length;
     const closedToday = st.tasks.filter((t) => t.lezarva && t.lezarva.slice(0, 10) === today).length;
     const MAXAL = 6;
-    const al = u.list.slice(0, MAXAL).map(({ t, di }) => `<button type="button" class="al ${di.state}" data-goto="${esc(t.id)}"><span class="chip dl ${di.state}" style="grid-area:auto">${ICON_CLOCK}${esc(di.label)}</span><span class="at">${esc(t.feladat.replace(TAG_RE, "").trim() || t.feladat)}</span></button>`).join("");
+    const act = activeOf(st.sessions), nxt = nextTasks(now, act && act.feladat_id), wk = todayWorkMs(now);
+    const al = nxt.slice(0, MAXAL).map(nextRow).join("");
     box.innerHTML = `<div class="tf">
     <div class="tf-l">
       <div class="ring">${ringSVG(done, tt.length)}</div>
@@ -1290,13 +1546,14 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
           <div class="num"><b class="${u.over ? "c-red" : "dim"}">${u.over}</b><span class="cap">lej\xE1rt</span></div>
           <div class="num"><b class="${older ? "c-orange" : "dim"}">${older}</b><span class="cap">r\xE9gebbi nyitott</span></div>
           <div class="num"><b class="${closedToday ? "c-cyan" : "dim"}">${closedToday}</b><span class="cap">ma lez\xE1rva</span></div>
+          <div class="num"><b class="${wk ? "c-cyan" : "dim"}" id="ldToday">${fmtWork(wk)}</b><span class="cap">m\xE9rt id\u0151 ma</span></div>
         </div>
       </div>
     </div>
     <div class="tf-r">
-      <div class="tf-rh"><span class="cap">Hat\xE1rid\u0151k \xB7 lej\xE1rt, \u22642 \xF3ra, ma</span><button type="button" class="mini park-j" data-jump="park" title="Nem \xFCtemezett feladatok (nem sz\xE1m\xEDtanak a statisztik\xE1ba)">T\xE1rol\xF3 (${np}) \u2193</button><button type="button" class="mini" data-jump="overview" title="Heti, havi \xE9s megb\xEDz\xF3i statisztika az oldal alj\xE1n">h\xE9t \xB7 h\xF3nap \xB7 megb\xEDz\xF3k \u2193</button></div>
-      ${al ? `<div class="tf-al">${al}</div>` : '<div class="sm dim">Nincs k\xF6zelg\u0151 hat\xE1rid\u0151.</div>'}${u.list.length > MAXAL ? `<div class="sm dim">+ ${u.list.length - MAXAL} tov\xE1bbi</div>` : ""}
-    </div></div>`;
+      <div class="tf-rh"><span class="cap">K\xF6vetkez\u0151 feladatok \xB7 hat\xE1rid\u0151 szerint</span><button type="button" class="mini park-j" data-jump="park" title="Nem \xFCtemezett feladatok (nem sz\xE1m\xEDtanak a statisztik\xE1ba)">T\xE1rol\xF3 (${np}) \u2193</button><button type="button" class="mini" data-jump="overview" title="Heti, havi \xE9s megb\xEDz\xF3i statisztika az oldal alj\xE1n">h\xE9t \xB7 h\xF3nap \xB7 megb\xEDz\xF3k \u2193</button></div>
+      ${al ? `<div class="tf-al">${al}</div>` : '<div class="sm dim">Nincs nyitott feladat.</div>'}${nxt.length > MAXAL ? `<div class="sm dim">+ ${nxt.length - MAXAL} tov\xE1bbi</div>` : ""}
+    </div></div>${liveBar(now)}`;
   }
   function renderDash() {
     renderToday();
@@ -1461,6 +1718,10 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       localStorage.setItem(LS_H, histToCSV(st.hist));
     } catch {
     }
+    try {
+      localStorage.setItem(LS_S, sessionsToCSV(st.sessions));
+    } catch {
+    }
   };
   var loadMirror = () => {
     try {
@@ -1471,6 +1732,8 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       reconcilePeople(st.tasks, st.people);
       const rh = localStorage.getItem(LS_H);
       st.hist = rh ? parseHistory(rh) : [];
+      const rs = localStorage.getItem(LS_S);
+      st.sessions = rs ? parseSessions(rs).sessions : [];
     } catch {
     }
     resetSnap();
@@ -1530,8 +1793,8 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       console.warn("Napi ment\xE9s nem siker\xFClt:", e);
     }
   }
-  async function schemaBackup(raw) {
-    const n = /* @__PURE__ */ new Date(), name = `feladatnaplo_${todayStr()}_${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}_atalakitas-elott.csv`;
+  async function schemaBackup(raw, prefix = "feladatnaplo", tag = "atalakitas-elott") {
+    const n = /* @__PURE__ */ new Date(), name = `${prefix}_${todayStr()}_${pad(n.getHours())}${pad(n.getMinutes())}${pad(n.getSeconds())}_${tag}.csv`;
     await writeTo(await backupDir(), name, "\uFEFF" + raw);
   }
   async function openFolder() {
@@ -1540,6 +1803,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       st.fh = await st.dir.getFileHandle(FILE_NAME, { create: true });
       st.fhP = await st.dir.getFileHandle(PEOPLE_FILE, { create: true });
       st.fhH = await st.dir.getFileHandle(HIST_FILE, { create: true });
+      st.fhS = await st.dir.getFileHandle(SESS_FILE, { create: true });
       const file = await st.fh.getFile();
       st.lastMod = file.lastModified;
       const raw = await decodeFile(file);
@@ -1563,6 +1827,15 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       const rawH = await decodeFile(fileH);
       if (rawH.trim()) await dailyBackup(rawH, "tortenet");
       mergeHistory(st.hist, parseHistory(rawH));
+      const fileS = await st.fhS.getFile();
+      st.lastModS = fileS.lastModified;
+      const rawS = await decodeFile(fileS), pS = parseSessions(rawS);
+      st.sessBlocked = pS.blocked;
+      if (!pS.blocked) {
+        if (rawS.trim()) await dailyBackup(rawS, "munkamenetek");
+        if (pS.bad || pS.fixed) await schemaBackup(rawS, "munkamenetek", "javitas-elott");
+        mergeSessions(st.sessions, pS.sessions);
+      }
       const off = getOffline();
       if (off) {
         mergeInto(st.tasks, disk, st.deleted);
@@ -1581,10 +1854,13 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       if (needT) st.dirty = true;
       if (needP) st.dirtyP = true;
       if (rawH !== histToCSV(st.hist).slice(1)) st.dirtyH = true;
-      if (needT || needP || st.dirtyH) await flush();
+      if (!st.sessBlocked && rawS !== sessionsToCSV(st.sessions).slice(1)) st.dirtyS = true;
+      if (needT || needP || st.dirtyH || st.dirtyS) await flush();
       else st.savedAt = /* @__PURE__ */ new Date();
       const msg = [];
       if (kind === "v1" || kind === "v0") msg.push("A CSV \xE1talak\xEDtva az \xFAj szerkezetre. Az eredeti a \u201Ementesek\u201D mapp\xE1ban van.");
+      if (st.sessBlocked) msg.push("A munkamenetek.csv ismeretlen form\xE1tum\xFA, nem \xEDrom fel\xFCl. Az id\u0151m\xE9r\xE9s addig csak a b\xF6ng\xE9sz\u0151ben t\xE1rol\xF3dik.");
+      else if (pS.bad || pS.fixed) msg.push(`A munkamenetek.csv ${pS.bad + pS.fixed} sor\xE1t jav\xEDtani kellett; az eredeti a \u201Ementesek\u201D mapp\xE1ban van.`);
       if (!diskP && st.people.length) msg.push(`Megb\xEDz\xF3k lista l\xE9trehozva a feladatokb\xF3l: ${st.people.length} n\xE9v (megbizok.csv).`);
       else if (rec.added.length) msg.push(`${rec.added.length} \xFAj megb\xEDz\xF3 felker\xFClt a list\xE1ra.`);
       if (msg.length) toast(msg.join(" "));
@@ -1629,7 +1905,9 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   function queueSave(kind) {
     logChanges();
     if (kind === "p") st.dirtyP = true;
-    else st.dirty = true;
+    else if (kind === "s") {
+      if (!st.sessBlocked) st.dirtyS = true;
+    } else st.dirty = true;
     persistLocal();
     if (st.mode !== "folder") setOffline(true);
     renderStatus();
@@ -1659,9 +1937,17 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     st.err = null;
     renderStatus();
     try {
-      while (st.dirty || st.dirtyP || st.dirtyH) {
+      while (st.dirty || st.dirtyP || st.dirtyH || st.dirtyS) {
         if (st.dirtyP) await flushAux("P", (raw) => mergePeopleInto(st.people, parsePeople(raw), st.deletedP), () => peopleToCSV(st.people));
         if (st.dirtyH) await flushAux("H", (raw) => mergeHistory(st.hist, parseHistory(raw)), () => histToCSV(st.hist));
+        if (st.dirtyS) {
+          let changed = false;
+          await flushAux("S", (raw) => {
+            const p = parseSessions(raw);
+            if (!p.blocked && mergeSessions(st.sessions, p.sessions)) changed = true;
+          }, () => sessionsToCSV(st.sessions));
+          if (changed) render();
+        }
         if (st.dirty) {
           st.dirty = false;
           const f = await st.fh.getFile();
@@ -1687,6 +1973,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       st.dirty = true;
       st.dirtyP = true;
       st.dirtyH = true;
+      st.dirtyS = !st.sessBlocked;
       st.err = e;
       if (e && e.name === "NotAllowedError") st.mode = "needperm";
       else st.retryTimer = setTimeout(flush, 15e3);
@@ -1695,8 +1982,24 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       renderStatus();
     }
   }
+  async function syncSessions() {
+    if (st.mode !== "folder" || !st.fhS || st.sessBlocked || st.dirtyS || st.saving) return false;
+    try {
+      const f = await st.fhS.getFile();
+      if (f.lastModified === st.lastModS) return false;
+      st.lastModS = f.lastModified;
+      const rawS = await decodeFile(f), p = parseSessions(rawS);
+      if (p.blocked) return false;
+      const n = mergeSessions(st.sessions, p.sessions);
+      if (rawS !== sessionsToCSV(st.sessions).slice(1)) queueSave("s");
+      else if (n) persistLocal();
+      return n > 0;
+    } catch {
+      return false;
+    }
+  }
   async function checkExternal() {
-    if (st.mode !== "folder" || st.dirty || st.dirtyP || st.dirtyH || st.saving || st.editing || ov.pEdit != null || !st.fh) return;
+    if (st.mode !== "folder" || st.dirty || st.dirtyP || st.dirtyH || st.dirtyS || st.saving || st.editing || ov.pEdit != null || !st.fh) return;
     try {
       let changed = false;
       const f = await st.fh.getFile();
@@ -1735,6 +2038,17 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
         st.lastModH = fhh.lastModified;
         if (mergeHistory(st.hist, parseHistory(await decodeFile(fhh)))) changed = true;
       }
+      if (st.fhS) {
+        const fS = await st.fhS.getFile();
+        if (fS.lastModified !== st.lastModS) {
+          st.lastModS = fS.lastModified;
+          const rawS = await decodeFile(fS), pS = parseSessions(rawS);
+          if (!pS.blocked && mergeSessions(st.sessions, pS.sessions)) {
+            changed = true;
+            if (rawS !== sessionsToCSV(st.sessions).slice(1)) st.dirtyS = true;
+          }
+        }
+      }
       if (!changed) return;
       const rec = reconcilePeople(st.tasks, st.people);
       resetSnap();
@@ -1743,7 +2057,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       render();
       persistLocal();
       toast("A f\xE1jl id\u0151k\xF6zben v\xE1ltozott \u2013 friss\xEDtettem.");
-      if (st.dirty || st.dirtyP) {
+      if (st.dirty || st.dirtyP || st.dirtyS) {
         renderStatus();
         st.saveTimer = setTimeout(flush, 300);
       }
@@ -1883,12 +2197,12 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
   }
 
   // src/park.js
-  var mdShort = (ds) => ds.slice(5).replace("-", ".") + ".";
+  var mdShort2 = (ds) => ds.slice(5).replace("-", ".") + ".";
   function parkRow(t, terms) {
     const ht = terms.filter((x) => x[0] !== "@" && x[0] !== "#");
     const tip = t.letrehozva ? "Felv\xE9ve: " + t.letrehozva.replace("T", " ") : "";
     return `<li class="pkrow" data-id="${esc(t.id)}">
-    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megb\xEDz\xF3 \u2013 kattint\xE1sra sz\u0171r\xE9s">${ICON_USER}${hl(t.megbizo, ht)}</button>` : ""}<span class="chip pkd">felv\xE9ve ${mdShort(t.letrehozva ? t.letrehozva.slice(0, 10) : t.datum)}</span></div>
+    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megb\xEDz\xF3 \u2013 kattint\xE1sra sz\u0171r\xE9s">${ICON_USER}${hl(t.megbizo, ht)}</button>` : ""}<span class="chip pkd">felv\xE9ve ${mdShort2(t.letrehozva ? t.letrehozva.slice(0, 10) : t.datum)}</span></div>
     <div class="pk-act">
       <button type="button" class="mini" data-act="pkmove" data-to="today" title="\xC1thelyez\xE9s a mai napra">Ma</button>
       <button type="button" class="mini" data-act="pkmove" data-to="tom" title="\xC1thelyez\xE9s holnapra">Holnap</button>
@@ -1933,7 +2247,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     if (!matches(t, queryTerms())) resetFilters();
     renderList();
     flash(id);
-    toast(`\xC1thelyezve a rendes feladatok k\xF6z\xE9: ${ds === todayStr() ? "ma" : mdShort(ds)}`, "Visszavon\xE1s", () => updateTask(id, { tarolo: "igen", datum: prev.datum, letrehozva: prev.letrehozva, hatarido: "" }));
+    toast(`\xC1thelyezve a rendes feladatok k\xF6z\xE9: ${ds === todayStr() ? "ma" : mdShort2(ds)}`, "Visszavon\xE1s", () => updateTask(id, { tarolo: "igen", datum: prev.datum, letrehozva: prev.letrehozva, hatarido: "" }));
   }
   function sendToPark(id) {
     const t = st.tasks.find((x) => x.id === id);
@@ -1968,12 +2282,13 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
       t.modositva && t.modositva !== t.letrehozva && "M\xF3dos\xEDtva: " + t.modositva.replace("T", " "),
       t.lezarva && "Lez\xE1rva: " + t.lezarva.replace("T", " ")
     ].filter(Boolean).join("\n");
-    const cls = "task" + (done ? " done" : "") + (di && !done ? " st-" + di.state : "");
+    const act = activeOf(st.sessions), working = !!act && act.feladat_id === t.id && !done;
+    const cls = "task" + (done ? " done" : "") + (di && !done ? " st-" + di.state : "") + (working ? " working" : "");
     return `<li class="${cls}" data-id="${esc(t.id)}">
     <input type="checkbox" class="chk" data-act="toggle" ${done ? "checked" : ""} aria-label="K\xE9sz">
-    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megb\xEDz\xF3 \u2013 kattint\xE1sra sz\u0171r\xE9s">${ICON_USER}${hl(t.megbizo, terms.filter((x) => x[0] !== "@" && x[0] !== "#"))}</button>` : ""}</div>
+    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${working ? `<span class="chip wk" data-lt title="Folyamatban l\xE9v\u0151 munkamenet">${fmtHMS(durMs(act, now, capOf(live.gap)))}</span>` : ""}${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megb\xEDz\xF3 \u2013 kattint\xE1sra sz\u0171r\xE9s">${ICON_USER}${hl(t.megbizo, terms.filter((x) => x[0] !== "@" && x[0] !== "#"))}</button>` : ""}</div>
     ${di ? `<span class="chip dl ${di.state}" title="Hat\xE1rid\u0151: ${esc(t.hatarido.replace("T", " "))}">${ICON_CLOCK}${esc(di.label)}</span>` : ""}
-    <span class="acts">${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkeszt\xE9s" aria-label="Szerkeszt\xE9s">\u270E</button></span></li>`;
+    <span class="acts">${done ? "" : working ? `<button type="button" class="icon go-b on" data-act="pause" title="Sz\xFCneteltet\xE9s" aria-label="Sz\xFCneteltet\xE9s">${ICON_PAUSE}</button>` : `<button type="button" class="icon go-b" data-act="start" title="Munka ind\xEDt\xE1sa" aria-label="Munka ind\xEDt\xE1sa">${ICON_PLAY}</button>`}${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkeszt\xE9s" aria-label="Szerkeszt\xE9s">\u270E</button></span></li>`;
   }
   var histBtn = (id) => `<button type="button" class="icon hist-b${ui.histOpen.has(id) ? " on" : ""}" data-act="hist" title="El\u0151zm\xE9nyek" aria-label="El\u0151zm\xE9nyek" aria-expanded="${ui.histOpen.has(id)}">${ICON_CLOCK}</button>`;
   function histRow(t) {
@@ -2036,9 +2351,12 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
   function updateTask(id, patch) {
     const t = st.tasks.find((x) => x.id === id);
     if (!t) return;
-    Object.assign(t, patch, { modositva: stamp() });
-    if (patch.statusz !== void 0) t.lezarva = patch.statusz === "kesz" ? stamp() : "";
+    const nowMs = Date.now(), ts = stampAt(nowMs);
+    Object.assign(t, patch, { modositva: ts });
+    if (patch.statusz !== void 0) t.lezarva = patch.statusz === "kesz" ? ts : "";
+    const ended = (patch.statusz === "kesz" || patch.tarolo === "igen") && stopForTask(st.sessions, id, nowMs, patch.statusz === "kesz" ? "kesz" : "tarolo");
     queueSave();
+    if (ended) queueSave("s");
     render();
   }
   function startEdit(id) {
@@ -2057,7 +2375,9 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     st.tasks = st.tasks.filter((x) => x !== t);
     st.deleted.add(id);
     st.editing = null;
+    const ended = stopForTask(st.sessions, id, Date.now(), "torles");
     queueSave();
+    if (ended) queueSave("s");
     render();
     toast("T\xF6r\xF6lve.", "Visszavon\xE1s", () => {
       st.tasks.push(t);
@@ -2096,6 +2416,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
   function tick() {
     const n = /* @__PURE__ */ new Date();
     $("#clock").textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+    updateLive(n.getTime());
     const mk = Math.floor(n.getTime() / 6e4);
     if (mk !== lastMinute) {
       lastMinute = mk;
@@ -2230,6 +2551,78 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     } else if (k === "Tab" && v && !ex && n && !ac.items[ac.on].isNew) acPick(ac.on);
   }, true);
 
+  // src/work.js
+  var setHb = (ms) => {
+    try {
+      localStorage.setItem(LS_HB, String(ms));
+    } catch {
+    }
+  };
+  var nameOf = (id) => {
+    const t = st.tasks.find((x) => x.id === id);
+    return t ? clip(t.feladat.replace(/\s+/g, " "), 50) : "(t\xF6r\xF6lt feladat)";
+  };
+  async function startWorkOn(id) {
+    const t = st.tasks.find((x) => x.id === id);
+    if (!t || isDone(t) || isParked(t)) {
+      toast("Csak nyitott, \xFCtemezett feladaton ind\xEDthat\xF3 munka.");
+      return;
+    }
+    await syncSessions();
+    const now = Date.now(), r = startWork(st.sessions, id, now);
+    if (r.same) {
+      toast("M\xE1r ezen a feladaton dolgozol.");
+      return;
+    }
+    live.gap = null;
+    setHb(now);
+    queueSave("s");
+    render();
+    const msg = r.closed ? `V\xE1lt\xE1s: ${nameOf(r.closed.feladat_id)} \u2192 ${nameOf(id)}` : `Munka elind\xEDtva: ${nameOf(id)}`;
+    toast(msg, "Visszavon\xE1s", () => {
+      if (!r.started || !isActive(r.started) || !st.sessions.includes(r.started)) {
+        toast("M\xE1r nem vonhat\xF3 vissza.");
+        return;
+      }
+      st.sessions.splice(st.sessions.indexOf(r.started), 1);
+      if (r.closed && !activeOf(st.sessions)) Object.assign(r.closed, { veg: "", idotartam_mp: "", ok: "" });
+      queueSave("s");
+      render();
+    });
+  }
+  async function pauseActive() {
+    await syncSessions();
+    const a = activeOf(st.sessions);
+    if (!a) return;
+    const now = Date.now(), cap = capOf(live.gap), d = durMs(a, now, cap);
+    const c = pauseWork(st.sessions, Math.min(now, cap));
+    live.gap = null;
+    queueSave("s");
+    render();
+    toast(`Sz\xFCneteltetve \xB7 ${fmtWork(d)} \xB7 ${nameOf(c.feladat_id)}`, "Folytat\xE1s", () => startWorkOn(c.feladat_id));
+  }
+  async function finishActive() {
+    await syncSessions();
+    const a = activeOf(st.sessions);
+    if (!a) return;
+    const id = a.feladat_id, t = st.tasks.find((x) => x.id === id);
+    if (!t) {
+      pauseWork(st.sessions, Math.min(Date.now(), capOf(live.gap)));
+      live.gap = null;
+      queueSave("s");
+      render();
+      return;
+    }
+    const cap = capOf(live.gap);
+    if (cap !== Infinity) {
+      stopForTask(st.sessions, id, cap, "kesz");
+      queueSave("s");
+    }
+    live.gap = null;
+    updateTask(id, { statusz: "kesz" });
+    toast(`K\xE9sz \xB7 ${nameOf(id)} \xB7 r\xE1ford\xEDt\xE1s: ${fmtWork(workMsOfTask(st.sessions, id, Date.now()))}`);
+  }
+
   // src/events.js
   $("#addForm").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -2331,6 +2724,14 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
       if (j.dataset.jump === "park" && !ov.park) setParkOpen(true);
       const el = document.getElementById(j.dataset.jump);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    const lv = e.target.closest("[data-live]");
+    if (lv) {
+      const a = lv.dataset.live;
+      if (a === "start") startWorkOn(lv.dataset.id);
+      else if (a === "pause") pauseActive();
+      else if (a === "finish") finishActive();
       return;
     }
     const g = e.target.closest("[data-goto]");
@@ -2442,6 +2843,12 @@ Biztosan \xFAj megb\xEDz\xF3t veszel fel: \u201E${n}\u201D?`)) return;
       switch (b.dataset.act) {
         case "edit":
           startEdit(id);
+          break;
+        case "start":
+          startWorkOn(id);
+          break;
+        case "pause":
+          pauseActive();
           break;
         case "hist":
           ui.histOpen.has(id) ? ui.histOpen.delete(id) : ui.histOpen.add(id);

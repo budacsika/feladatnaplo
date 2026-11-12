@@ -5,12 +5,13 @@ export const VERSION = typeof __VERSION__ === 'string' ? __VERSION__ : 'dev';   
 /* ---------- állapot ---------- */
 export const FILE_NAME = 'feladatnaplo.csv', BACKUP_DIR = 'mentesek', BACKUP_KEEP = 60;
 
-export const DB_NAME = 'feladatnaplo-mytask', STORE = 'kv', LS = 'feladatnaplo.v1', LS_OFF = 'feladatnaplo.v1.offline', LS_DASH = 'feladatnaplo.dash', LS_P = 'feladatnaplo.v1.people', LS_PPL = 'feladatnaplo.ppl', LS_PARK = 'feladatnaplo.park', PEOPLE_FILE = 'megbizok.csv', HIST_FILE = 'tortenet.csv', LS_H = 'feladatnaplo.v1.hist', LS_JRN = 'feladatnaplo.journal';
+export const DB_NAME = 'feladatnaplo-mytask', STORE = 'kv', LS = 'feladatnaplo.v1', LS_OFF = 'feladatnaplo.v1.offline', LS_DASH = 'feladatnaplo.dash', LS_P = 'feladatnaplo.v1.people', LS_PPL = 'feladatnaplo.ppl', LS_PARK = 'feladatnaplo.park', PEOPLE_FILE = 'megbizok.csv', HIST_FILE = 'tortenet.csv', LS_H = 'feladatnaplo.v1.hist', LS_JRN = 'feladatnaplo.journal', SESS_FILE = 'munkamenetek.csv', LS_S = 'feladatnaplo.v1.sessions', LS_HB = 'feladatnaplo.live.hb';
 
 export const st = { tasks:[], deleted:new Set(), mode:'none', dir:null, fh:null, lastMod:0,
   dirty:false, saving:false, err:null, savedAt:null, editing:null, dateTouched:false, saveTimer:0, retryTimer:0,
   people:[], deletedP:new Set(), fhP:null, lastModP:0, dirtyP:false,
-  hist:[], fhH:null, lastModH:0, dirtyH:false };   // hist: előzmény-események (tortenet.csv)
+  hist:[], fhH:null, lastModH:0, dirtyH:false,   // hist: előzmény-események (tortenet.csv)
+  sessions:[], fhS:null, lastModS:0, dirtyS:false, sessBlocked:false };   // sessions: munkamenetek (munkamenetek.csv); sessBlocked: ismeretlen formátumú fájl, nem írjuk felül
 
 export const ui = { search:'', status:'all', period:'all', dayState:new Map(), histOpen:new Set() };   // dayState: nap → kézzel nyitott/zárt; alapból csak a mai nap nyitott
 
@@ -25,3 +26,10 @@ export const ICON_USER = '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx
 export const ICON_CLOCK = '<svg viewBox="0 0 12 12" aria-hidden="true"><circle cx="6" cy="6" r="4.6"/><path d="M6 3.2V6l2 1.2"/></svg>';
 
 export const isDone = t => t.statusz === 'kesz';
+
+export const ICON_PLAY = '<svg viewBox="0 0 12 12" aria-hidden="true" class="fl"><path d="M3.4 2v8L10 6z"/></svg>';
+
+export const ICON_PAUSE = '<svg viewBox="0 0 12 12" aria-hidden="true" class="fl"><path d="M3 2h2.1v8H3zM6.9 2H9v8H6.9z"/></svg>';
+
+// Live Desk: gap = függő alvás/óraváltozás-ellenőrzés ({kind, fromMs, toMs}) vagy null
+export const live = { gap: null };
