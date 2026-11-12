@@ -1,6 +1,6 @@
 {
   "name": "feladatnaplo",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "private": true,
   "description": "Egyfájlos, böngészőben futó feladatnapló (CSV-tárolás a File System Access API-val)",
   "scripts": {

@@ -98,6 +98,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 | Verzió | Újdonság |
 |---|---|
 | 2.6 | Összecsukható napok (alapból csak a mai nyitott) |
+| 2.6.1 | Szigorúbb dátum- és időellenőrzés (feb. 31., szökőév, óra/perc tartomány) |
 | 2.5 | Tároló: nem ütemezett feladatok, `tarolo` oszlop |
 | 2.4 | Heti és havi áttekintés újratervezve, többsoros határidő-lista |
 | 2.3 | Napi státusz lapos sávban felül, heti/havi/megbízói blokk alul, kiemelt felviteli űrlap |

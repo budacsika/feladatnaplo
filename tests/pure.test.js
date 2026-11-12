@@ -68,6 +68,33 @@ assert.strictEqual(normStamp('2026. 11. 09. 16:00:05'), '2026-11-09T16:00:05');
 assert.strictEqual(normDeadline('2026-11-09T16:00:30'), '2026-11-09T16:00');
 assert.strictEqual(normDeadline('2026.11.12'), '2026-11-12');
 assert.strictEqual(normStamp('nem dátum'), '');
+// naptári érvényesség
+assert.strictEqual(normDate('2026-02-31'), '');
+assert.strictEqual(normDate('31.02.2026'), '');
+assert.strictEqual(normDate('2026-04-31'), '');
+assert.strictEqual(normDate('2027-02-29'), '');
+assert.strictEqual(normDate('2028-02-29'), '2028-02-29');
+assert.strictEqual(normDate('2100-02-29'), '');
+assert.strictEqual(normDate('2026-02-28'), '2026-02-28');
+assert.strictEqual(normDate('2026-12-31'), '2026-12-31');
+assert.strictEqual(normDate('2026-00-10'), '');
+assert.strictEqual(normDate('2026-13-10'), '');
+assert.strictEqual(normDate('0001-01-01'), '');
+assert.strictEqual(normStamp('2026-02-30 10:00'), '');
+// óra / perc / másodperc tartomány
+assert.strictEqual(normStamp('2026-11-09 24:00'), '');
+assert.strictEqual(normStamp('2026-11-09 23:60'), '');
+assert.strictEqual(normStamp('2026-11-09 12:30:60'), '');
+assert.strictEqual(normStamp('2026-11-09 23:59:59'), '2026-11-09T23:59:59');
+assert.strictEqual(normStamp('2026-11-09 00:00'), '2026-11-09T00:00');
+assert.strictEqual(normDeadline('2026-11-09T25:00'), '');
+assert.strictEqual(normDeadline('2026-11-09T17:45'), '2026-11-09T17:45');
+// lehetetlen dátumú sor: a létrehozás dátumára esik vissza
+{
+  const q = parse('id;datum;feladat;statusz;letrehozva\nx1;2026-02-31;Teszt;nyitott;2026-03-02T08:00\n');
+  assert.strictEqual(q.tasks.length, 1);
+  assert.strictEqual(q.tasks[0].datum, '2026-03-02');
+}
 
 // 5) #címke kinyerés
 assert.deepStrictEqual(extractTags('Riport #felület és (#zárás) de nem a http://x/#abc vagy a#b #RIPORT_DOC'), ['felület', 'zárás', 'RIPORT_DOC']);
