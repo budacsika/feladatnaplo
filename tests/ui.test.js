@@ -125,7 +125,7 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   await page.click('#pplToggle');
   await page.type('#pplNew', 'Ádám'); await page.keyboard.press('Enter');
   await page.waitForFunction(() => document.querySelector('#pplBody').textContent.includes('Ádám'));
-  await page.evaluate(() => [...document.querySelectorAll('#list .task')].find(li => li.textContent.includes('Admin felhasználót')).querySelector('.icon').click());   // megbízó nélküli, régi sor
+  await page.evaluate(() => [...document.querySelectorAll('#list .task')].find(li => li.textContent.includes('Admin felhasználót')).querySelector('[data-act=edit]').click());   // megbízó nélküli, régi sor
   await page.waitForSelector('#list textarea');
   await page.click('#list [name=megbizo]');
   await page.keyboard.type('ad');
@@ -207,6 +207,38 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   const openTxt = dayRows.filter(r => !r.done).map(r => r.txt);
   assert(openTxt.indexOf('Tömeges import utánanézése - kézikönyv, 11-es pont. #import') < openTxt.indexOf('Évzáró levél kiküldése, a leírás dokumentálása #evzaro_level'), 'nyitottak rögzítési idő szerint');
 
+  // 6c) előzmények: tortenet.csv, feladatonkénti idővonal, napi napló
+  let hist = await page.evaluate(() => window.__text('tortenet.csv'));
+  assert(hist && hist.startsWith('\uFEFFid;feladat;idopont;mezo;regi;uj'), 'tortenet.csv létrejött fejléccel: ' + String(hist).slice(0, 60));
+  assert(/;letrehozva;;/.test(hist), 'létrehozás naplózva');
+  assert(/;statusz;nyitott;kesz\r?\n/.test(hist), 'lezárás naplózva');
+  assert(/;megbizo;Zsolt;Csaba\r?\n/.test(hist), 'megbízó-átnevezés feladatonként naplózva');
+  await page.click('#list .task.done [data-act=hist]');
+  await page.waitForSelector('#list .hist');
+  const tl = await page.$eval('#list .hist', e => e.textContent);
+  assert(tl.includes('Lezárva'), 'idővonal: ' + tl);
+  assert(await page.$eval('#list .task.done [data-act=hist]', e => e.getAttribute('aria-expanded') === 'true'), 'gomb nyitott állapotú');
+  await (await page.$('#list .hist')).screenshot({ path: path.resolve(OUT, 'shot-history.png') });
+  await page.click('#list .task.done [data-act=hist]');
+  assert.strictEqual(await page.$$eval('#list .hist', e => e.length), 0, 'idővonal bezárva');
+  await page.click('#btnJournal');
+  await page.waitForSelector('#journal:not([hidden])');
+  assert.strictEqual(await page.$eval('#jDay', e => e.value), '2026-11-09', 'napló: a mai nap');
+  const jl = await page.$eval('#journalBody', e => e.textContent);
+  assert(jl.includes('Lezárva') && jl.includes('Létrehozva'), 'napló tartalma: ' + jl.slice(0, 200));
+  await (await page.$('#journal')).screenshot({ path: path.resolve(OUT, 'shot-journal.png') });
+  await page.click('#jPrev');
+  assert.strictEqual(await page.$eval('#jDay', e => e.value), '2026-11-08', 'előző nap');
+  await page.click('#jNext'); await page.click('#jNext');
+  assert.strictEqual(await page.$eval('#jDay', e => e.value), '2026-11-10', 'következő nap');
+  assert((await page.$eval('#journalBody', e => e.textContent)).includes('nincs rögzített esemény'), 'üres nap');
+  await page.click('#jToday');
+  assert.strictEqual(await page.$eval('#jDay', e => e.value), '2026-11-09');
+  // kívülről érkező előzmény-esemény egyesül (nem írja felül a helyieket)
+  await page.evaluate(() => { const t = window.__text('tortenet.csv'); window.__put('tortenet.csv', t + 'ext1;gone1;2026-11-09T07:30:00;torolve;Kívül törölt feladat;\r\n'); window.__root.children.get('tortenet.csv').mtime = Date.now() + 5000; window.dispatchEvent(new Event('focus')); });
+  await page.waitForFunction(() => document.querySelector('#journalBody').textContent.includes('Kívül törölt feladat'), { timeout: 3000 });
+  assert(await page.$eval('#journalBody li.gone', e => e.textContent.includes('Törölve')), 'törölt feladat jelölve');
+
   // 7) dashboard: panelek, lapozás, elrejtés
   assert.strictEqual(await page.$$eval('#dash .panel', e => e.length), 2);
   assert((await page.$eval('#today .ring-svg', e => e.textContent)).includes('/'));
@@ -285,6 +317,10 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   await page.waitForFunction(() => document.querySelectorAll('#parkBody .pkrow').length === 1);
   assert.strictEqual(await page.$$eval('#list .task', e => e.length), nList);
   assert.deepStrictEqual(await page.$$eval('#today .num b', e => e.map(x => x.textContent)), numsBefore, 'visszatárolás után a számok az eredetiek');
+  await sleep(600);
+  const h2 = await page.evaluate(() => window.__text('tortenet.csv'));
+  assert(/;tarolo;;igen\r?\n/.test(h2) && /;tarolo;igen;\r?\n/.test(h2), 'tárolóba tétel / kivétel naplózva');
+  assert(/;datum;[\d-]+;[\d-]+\r?\n/.test(h2), 'Tárolóból áthelyezéskor a nap is naplózva');
 
   await page.screenshot({ path: path.resolve(OUT, 'shot-desktop.png') });
   await page.screenshot({ path: path.resolve(OUT, 'shot-desktop-full.png'), fullPage: true });
@@ -320,6 +356,9 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   csv = await page.evaluate(() => window.__text('feladatnaplo.csv'));
   assert(csv.includes('Kívülről érkezett #excel'), 'külső v1 sor átalakítva és kiírva');
   assert((await page.evaluate(() => window.__list(window.__root.children.get('mentesek')))).length > nBackupsBefore, 'külső v1 módosítás előtt is készült mentés');
+  hist = await page.evaluate(() => window.__text('tortenet.csv'));
+  assert(!/;torolve;[^;]*Admin/.test(hist) && (hist.match(/;torolve;/g) || []).length === 1, 'a külső csere nem naplózódik törlésként (csak a kívülről jött 1 esemény van)');
+  assert(hist.includes('ext1;gone1;'), 'a külső esemény megmaradt a fájlban');
 
   // 11) napok összecsukása: alapból csak a mai nyitott
   await page.$eval('#fDate', e => { e.value = '2026-11-06'; e.dispatchEvent(new Event('change')); });

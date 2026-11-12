@@ -1,5 +1,6 @@
 // A napok szerinti feladatlista kirajzolása és a szerkesztősor
 import { dayLabel, fmtText, hl, matches, queryTerms } from './filter.js';
+import { fmtWhen, timelineFor } from './history.js';
 import { renderPark } from './park.js';
 import { $, ICON_CLOCK, ICON_USER, esc, isDone, st, ui } from './state.js';
 import { cmpTasks, dueInfo, isParked } from './tasks.js';
@@ -16,8 +17,20 @@ export function viewRow(t, terms, now){
     <input type="checkbox" class="chk" data-act="toggle" ${done?'checked':''} aria-label="Kész">
     <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megbízó – kattintásra szűrés">${ICON_USER}${hl(t.megbizo, terms.filter(x => x[0] !== '@' && x[0] !== '#'))}</button>` : ''}</div>
     ${di ? `<span class="chip dl ${di.state}" title="Határidő: ${esc(t.hatarido.replace('T',' '))}">${ICON_CLOCK}${esc(di.label)}</span>` : ''}
-    <button type="button" class="icon" data-act="edit" title="Szerkesztés" aria-label="Szerkesztés">✎</button></li>`;
+    <span class="acts">${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkesztés" aria-label="Szerkesztés">✎</button></span></li>`;
 }
+
+/* ---------- előzmények ---------- */
+export const histBtn = id => `<button type="button" class="icon hist-b${ui.histOpen.has(id) ? ' on' : ''}" data-act="hist" title="Előzmények" aria-label="Előzmények" aria-expanded="${ui.histOpen.has(id)}">${ICON_CLOCK}</button>`;
+
+// egy feladat időrendi története (a sor alatt nyílik ki)
+export function histRow(t){
+  const tl = timelineFor(t, st.hist.filter(e => e.feladat === t.id));
+  return `<li class="hist" data-for="${esc(t.id)}"><ol>${tl.map(x => `<li${x.old ? ' class="old" title="A naplózás előtti időbélyegből"' : ''}><time>${esc(fmtWhen(x.at))}</time><span>${esc(x.text)}</span></li>`).join('')}</ol></li>`;
+}
+
+// a sor + (ha nyitva van) az előzményei
+export const taskRows = (t, terms, now) => st.editing === t.id ? editRow(t) : viewRow(t, terms, now) + (ui.histOpen.has(t.id) ? histRow(t) : '');
 
 export function editRow(t){
   return `<li class="task editing" data-id="${esc(t.id)}"><form class="edit" data-id="${esc(t.id)}">
@@ -62,7 +75,7 @@ export function renderList(){
       const op = isOpen(cur), nOpen = cnt[cur] - (dn[cur]||0);
       html += `<section class="day${cur === today ? ' is-today' : ''}${op ? '' : ' collapsed'}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? 'Összecsukás' : 'Kinyitás'}"><span class="chev">▾</span>${esc(dayLabel(cur))}</button><small>${dn[cur]||0}/${cnt[cur]} kész${!op && nOpen ? ` · <b>${nOpen} nyitott</b>` : ''}</small></h2><ul>`;
     }
-    html += st.editing === t.id ? editRow(t) : viewRow(t, terms, now);
+    html += taskRows(t, terms, now);
   }
   list.innerHTML = html + '</ul></section>';
 }

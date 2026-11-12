@@ -5,6 +5,7 @@ import { mergeInto, extractTags, cimkeToTags, dueInfo, HEADER, cmpTasks, isParke
 import { detectDelimiter, parseCSV, rowsToTasks, toCSV } from '../src/csv.js';
 import { pkey, normName, parsePeople, peopleToCSV, seedPeople, reconcilePeople, mergePeopleInto, lev, suggestPeople, exactPerson } from '../src/people-model.js';
 import { periodStats, peopleStats } from '../src/stats.js';
+import { diffTasks, makeSnap, mergeHistory, histToCSV, parseHistory, describeEvent, timelineFor, journalDay, fmtWhen, HIST_HEADER } from '../src/history.js';
 
 const parse = raw => { const d = detectDelimiter(raw); return rowsToTasks(parseCSV(raw, d), d); };
 
@@ -250,3 +251,81 @@ console.log('Minden pure teszt rendben ✔');
   assert.strictEqual(parse(full).tasks[0].feladat, 'Teljes');
   console.log('Oszlopsorrend pure tesztek ✔');
 }
+
+// ---------- Előzmények (audit log) ----------
+{
+  const T = (o = {}) => ({ id: 'a1', datum: '2026-11-09', feladat: 'Teszt', megbizo: '', hatarido: '', statusz: 'nyitott', tarolo: '', letrehozva: '2026-11-09T09:12:03', ...o });
+  const NOW = '2026-11-09T10:35:00';
+  // új feladat: létrehozás a saját létrehozási idejével
+  let r = diffTasks(new Map(), [T()], new Set(), NOW);
+  assert.strictEqual(r.events.length, 1);
+  assert.deepStrictEqual({ ...r.events[0], id: '' }, { id: '', feladat: 'a1', idopont: '2026-11-09T09:12:03', mezo: 'letrehozva', regi: '', uj: 'Teszt' });
+  // nincs változás → nincs esemény
+  assert.strictEqual(diffTasks(r.snap, [T()], new Set(['a1']), NOW).events.length, 0);
+  // módosítás: mezőnként egy esemény; a modositva/lezarva időbélyeg önmagában nem
+  const base = makeSnap([T()]);
+  r = diffTasks(base, [T({ hatarido: '2026-11-09T17:00', megbizo: 'Lara', modositva: 'x', lezarva: 'y' })], new Set(['a1']), NOW);
+  assert.deepStrictEqual(r.events.map(e => [e.mezo, e.regi, e.uj, e.idopont]), [['megbizo', '', 'Lara', NOW], ['hatarido', '', '2026-11-09T17:00', NOW]].sort((a, b) => ['datum','feladat','megbizo','hatarido','statusz','tarolo'].indexOf(a[0]) - ['datum','feladat','megbizo','hatarido','statusz','tarolo'].indexOf(b[0])));
+  r = diffTasks(base, [T({ statusz: 'kesz' })], new Set(['a1']), NOW);
+  assert.deepStrictEqual(r.events.map(e => [e.mezo, e.regi, e.uj]), [['statusz', 'nyitott', 'kesz']]);
+  // törlés, majd visszavonás: törölve → visszaállítva (nem új létrehozás)
+  const del = diffTasks(base, [], new Set(['a1']), NOW);
+  assert.deepStrictEqual(del.events.map(e => [e.mezo, e.regi, e.uj]), [['torolve', 'Teszt', '']]);
+  const back = diffTasks(del.snap, [T()], new Set(['a1']), NOW);
+  assert.deepStrictEqual(back.events.map(e => e.mezo), ['visszaallitva']);
+  // tárolóba vett új feladat: létrehozva + tárolóba téve
+  r = diffTasks(new Map(), [T({ tarolo: 'igen' })], new Set(), NOW);
+  assert.deepStrictEqual(r.events.map(e => e.mezo), ['letrehozva', 'tarolo']);
+  // a baseline (makeSnap) nem termel eseményt a már meglévő feladatokra
+  assert.strictEqual(diffTasks(makeSnap([T(), T({ id: 'a2' })]), [T(), T({ id: 'a2' })], new Set(), NOW).events.length, 0);
+
+  // CSV körút: ; " és sortörés a szövegben, BOM, CRLF
+  const ev = [
+    { id: 'e2', feladat: 'a1', idopont: '2026-11-09T10:35:00', mezo: 'feladat', regi: 'régi; "szöveg"', uj: 'új\nsor' },
+    { id: 'e1', feladat: 'a1', idopont: '2026-11-09T09:12:03', mezo: 'letrehozva', regi: '', uj: 'Teszt' },
+  ];
+  const csv = histToCSV(ev);
+  assert(csv.startsWith('\uFEFF' + HIST_HEADER.join(';') + '\r\n') && csv.endsWith('\r\n'));
+  const back2 = parseHistory(csv);
+  assert.deepStrictEqual(back2.map(e => e.id), ['e1', 'e2'], 'idő szerint rendezve');
+  assert.strictEqual(back2[1].regi, 'régi; "szöveg"'); assert.strictEqual(back2[1].uj, 'új\nsor');
+  assert.strictEqual(histToCSV(back2), csv, 'stabil körút');
+  // fordított oszlopsorrend, Excel-dátum, érvénytelen sorok (ismeretlen mező, hibás idő, hiányzó id, duplikált id) kimaradnak
+  const odd = parseHistory('uj;regi;mezo;idopont;feladat;id\nX;;letrehozva;2026.11.09 09:12;a1;k1\nX;;ismeretlen;2026-11-09T09:12;a1;k2\nX;;letrehozva;2026-02-31T09:12;a1;k3\nX;;letrehozva;2026-11-09T09:12;a1;\nY;;letrehozva;2026-11-09T09:13;a1;k1\n');
+  assert.deepStrictEqual(odd.map(e => [e.id, e.idopont, e.uj]), [['k1', '2026-11-09T09:12', 'X']]);
+  assert.deepStrictEqual(parseHistory(''), []); assert.deepStrictEqual(parseHistory('semmi;köze\n1;2\n'), []);
+  // egyesítés: azonosító szerinti unió, idempotens, idő szerint rendezett
+  const tgt = [ev[1]];
+  assert.strictEqual(mergeHistory(tgt, [ev[0], ev[1]]), 1);
+  assert.deepStrictEqual(tgt.map(e => e.id), ['e1', 'e2']);
+  assert.strictEqual(mergeHistory(tgt, ev), 0);
+
+  // leírások
+  const d = (mezo, regi, uj) => describeEvent({ mezo, regi, uj });
+  assert.strictEqual(d('letrehozva', '', 'x'), 'Létrehozva');
+  assert.strictEqual(d('statusz', 'nyitott', 'kesz'), 'Lezárva');
+  assert.strictEqual(d('statusz', 'kesz', 'nyitott'), 'Újranyitva');
+  assert.strictEqual(d('hatarido', '', '2026-11-09T17:00'), 'Határidő megadva: 2026-11-09 17:00');
+  assert.strictEqual(d('hatarido', '2026-11-09T17:00', ''), 'Határidő törölve (volt: 2026-11-09 17:00)');
+  assert.strictEqual(d('hatarido', '2026-11-09T17:00', '2026-11-10T09:00'), 'Határidő: 2026-11-09 17:00 → 2026-11-10 09:00');
+  assert.strictEqual(d('megbizo', '', 'Lara'), 'Megbízó: – → Lara');
+  assert.strictEqual(d('datum', '2026-11-09', '2026-11-10'), 'Nap: 2026-11-09 → 2026-11-10');
+  assert.strictEqual(d('tarolo', '', 'igen'), 'Tárolóba téve'); assert.strictEqual(d('tarolo', 'igen', ''), 'Tárolóból kivéve');
+  assert.strictEqual(d('torolve', 'x', ''), 'Törölve'); assert.strictEqual(d('visszaallitva', '', 'x'), 'Visszaállítva');
+  assert(d('feladat', 'a'.repeat(100), 'b').includes('…') && d('feladat', 'a', 'b').includes('„a” → „b”'));
+  assert.strictEqual(fmtWhen('2026-11-09T16:20:05'), '11.09. 16:20');
+
+  // idővonal: a naplózás előtti feladat létrehozása/lezárása az időbélyegekből pótolódik
+  const old = T({ statusz: 'kesz', lezarva: '2026-11-09T14:20:00' });
+  let tl = timelineFor(old, []);
+  assert.deepStrictEqual(tl.map(x => [x.at, x.text, !!x.old]), [['2026-11-09T09:12:03', 'Létrehozva', true], ['2026-11-09T14:20:00', 'Lezárva', true]]);
+  // ha van rögzített esemény, nem pótolunk duplán
+  tl = timelineFor(old, [{ id: 'q', feladat: 'a1', idopont: '2026-11-09T09:12:03', mezo: 'letrehozva', regi: '', uj: 'Teszt' }, { id: 'w', feladat: 'a1', idopont: '2026-11-09T14:21:00', mezo: 'statusz', regi: 'nyitott', uj: 'kesz' }]);
+  assert.deepStrictEqual(tl.map(x => [x.text, !!x.old]), [['Létrehozva', false], ['Lezárva', false]]);
+  // napi napló: törölt feladat is megjelenik, a szövege az eseményekből; más napok kimaradnak
+  const jd = journalDay([old, T({ id: 'a2', feladat: 'Másik', letrehozva: '2026-11-08T08:00:00' })],
+    [{ id: 'z1', feladat: 'gone', idopont: '2026-11-09T11:00:00', mezo: 'torolve', regi: 'Törölt tétel', uj: '' }], '2026-11-09');
+  assert.deepStrictEqual(jd.map(x => [x.at.slice(11, 16), x.text, x.task, x.gone]), [['09:12', 'Létrehozva', 'Teszt', false], ['11:00', 'Törölve', 'Törölt tétel', true], ['14:20', 'Lezárva', 'Teszt', false]]);
+  assert.deepStrictEqual(journalDay([old], [], '2026-11-10'), []);
+}
+console.log('Előzmény pure tesztek ✔');

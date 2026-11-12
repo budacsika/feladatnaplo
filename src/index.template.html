@@ -72,6 +72,7 @@
       <option value="30">Utolsó 30 nap</option>
     </select>
     <button type="button" class="ghost park-b" id="btnPark" title="Nem ütemezett feladatok">Tároló (0)</button>
+    <button type="button" class="ghost" id="btnJournal" aria-pressed="false" title="Egy nap eseményei időrendben">Napló</button>
     <button type="button" class="ghost" id="btnPrint" title="Az aktuális szűrés nyomtatása vagy mentése PDF-ként">Nyomtatás / PDF</button>
   </div>
   <div class="meta"><span id="meta"></span><span class="meta-act"><button type="button" class="mini" id="daysAll" title="Minden nap kinyitása">mind kinyit</button><button type="button" class="mini" id="daysToday" title="Csak a mai nap maradjon nyitva">csak ma</button></span></div>
@@ -81,6 +82,13 @@
   <section id="park" class="panel park" aria-label="Tároló">
     <div class="ph"><span class="cap"><i class="pkd-dot"></i>Tároló · nem ütemezett</span><span class="rng mono" id="parkCount"></span><span class="note">nem számít bele a statisztikába</span><button type="button" class="mini" id="parkToggle">összecsukás</button></div>
     <div id="parkBody"></div>
+  </section>
+
+  <section id="journal" class="panel journal" aria-label="Napló" hidden>
+    <div class="ph"><span class="cap">Napló · mi történt aznap</span>
+      <span class="jnav"><button type="button" class="mini" id="jPrev" title="Előző nap" aria-label="Előző nap">‹</button><input type="date" id="jDay" aria-label="Nap"><button type="button" class="mini" id="jNext" title="Következő nap" aria-label="Következő nap">›</button><button type="button" class="mini" id="jToday">ma</button></span>
+      <span class="rng mono" id="jCount"></span><button type="button" class="mini jclose" id="journalClose">elrejtés</button></div>
+    <div id="journalBody"></div>
   </section>
 
   <section id="overview" class="overview">

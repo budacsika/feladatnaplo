@@ -5,15 +5,16 @@ export const VERSION = typeof __VERSION__ === 'string' ? __VERSION__ : 'dev';   
 /* ---------- állapot ---------- */
 export const FILE_NAME = 'feladatnaplo.csv', BACKUP_DIR = 'mentesek', BACKUP_KEEP = 60;
 
-export const DB_NAME = 'feladatnaplo-mytask', STORE = 'kv', LS = 'feladatnaplo.v1', LS_OFF = 'feladatnaplo.v1.offline', LS_DASH = 'feladatnaplo.dash', LS_P = 'feladatnaplo.v1.people', LS_PPL = 'feladatnaplo.ppl', LS_PARK = 'feladatnaplo.park', PEOPLE_FILE = 'megbizok.csv';
+export const DB_NAME = 'feladatnaplo-mytask', STORE = 'kv', LS = 'feladatnaplo.v1', LS_OFF = 'feladatnaplo.v1.offline', LS_DASH = 'feladatnaplo.dash', LS_P = 'feladatnaplo.v1.people', LS_PPL = 'feladatnaplo.ppl', LS_PARK = 'feladatnaplo.park', PEOPLE_FILE = 'megbizok.csv', HIST_FILE = 'tortenet.csv', LS_H = 'feladatnaplo.v1.hist', LS_JRN = 'feladatnaplo.journal';
 
 export const st = { tasks:[], deleted:new Set(), mode:'none', dir:null, fh:null, lastMod:0,
   dirty:false, saving:false, err:null, savedAt:null, editing:null, dateTouched:false, saveTimer:0, retryTimer:0,
-  people:[], deletedP:new Set(), fhP:null, lastModP:0, dirtyP:false };
+  people:[], deletedP:new Set(), fhP:null, lastModP:0, dirtyP:false,
+  hist:[], fhH:null, lastModH:0, dirtyH:false };   // hist: előzmény-események (tortenet.csv)
 
-export const ui = { search:'', status:'all', period:'all', dayState:new Map() };   // dayState: nap → kézzel nyitott/zárt; alapból csak a mai nap nyitott
+export const ui = { search:'', status:'all', period:'all', dayState:new Map(), histOpen:new Set() };   // dayState: nap → kézzel nyitott/zárt; alapból csak a mai nap nyitott
 
-export const ov = { w:0, m:0, park: (() => { try { return localStorage.getItem(LS_PARK) !== '0'; } catch { return true; } })(), people: (() => { try { return localStorage.getItem(LS_PPL) === '1'; } catch { return false; } })(), pPeriod:'all', pEdit:null, hidden: (() => { try { return localStorage.getItem(LS_DASH) === '0'; } catch { return false; } })() };
+export const ov = { w:0, m:0, park: (() => { try { return localStorage.getItem(LS_PARK) !== '0'; } catch { return true; } })(), people: (() => { try { return localStorage.getItem(LS_PPL) === '1'; } catch { return false; } })(), pPeriod:'all', pEdit:null, journal: (() => { try { return localStorage.getItem(LS_JRN) === '1'; } catch { return false; } })(), jDay:'', hidden: (() => { try { return localStorage.getItem(LS_DASH) === '0'; } catch { return false; } })() };
 
 export const $ = s => document.querySelector(s);
 

@@ -1,9 +1,9 @@
 // A Tároló (nem ütemezett feladatok) panel
 import { resetFilters, updateTask } from './actions.js';
 import { fmtText, hl, matches, matchesText, queryTerms } from './filter.js';
-import { editRow, renderList } from './list.js';
+import { editRow, histBtn, histRow, renderList } from './list.js';
 import { flash } from './render.js';
-import { $, ICON_USER, LS_PARK, esc, isDone, ov, st } from './state.js';
+import { $, ICON_USER, LS_PARK, esc, isDone, ov, st, ui } from './state.js';
 import { toast } from './status.js';
 import { cmpParked, isParked } from './tasks.js';
 import { stamp, todayStr } from './util.js';
@@ -21,7 +21,7 @@ export function parkRow(t, terms){
       <button type="button" class="mini" data-act="pkmove" data-to="tom" title="Áthelyezés holnapra">Holnap</button>
       <input type="date" class="pk-date" aria-label="Áthelyezés erre a napra" title="Válassz napot, majd nyomd meg a nyilat">
       <button type="button" class="mini" data-act="pkgo" title="Áthelyezés a kiválasztott napra">→</button>
-      <button type="button" class="icon" data-act="edit" title="Szerkesztés" aria-label="Szerkesztés">✎</button>
+      ${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkesztés" aria-label="Szerkesztés">✎</button>
     </div></li>`;
 }
 
@@ -38,7 +38,7 @@ export function renderPark(){
     box.innerHTML = `<div class="empty sm">${all.length ? 'Nincs találat a Tárolóban.' : 'A Tároló üres. Az űrlapon a „tárolóba” jelölővel veheted fel azt, aminek még nem tudod a dátumát.'}</div>`;
     return;
   }
-  box.innerHTML = `<ul class="pk-list">${vis.map(t => st.editing === t.id ? editRow(t) : parkRow(t, terms)).join('')}</ul>`;
+  box.innerHTML = `<ul class="pk-list">${vis.map(t => st.editing === t.id ? editRow(t) : parkRow(t, terms) + (ui.histOpen.has(t.id) ? histRow(t) : '')).join('')}</ul>`;
 }
 
 export function setParkOpen(on){ ov.park = on; try { localStorage.setItem(LS_PARK, on ? '1' : '0'); } catch {} renderPark(); }

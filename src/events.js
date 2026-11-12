@@ -9,6 +9,7 @@ import { renderList } from './list.js';
 import { moveFromPark, sendToPark, setPark, setParkOpen } from './park.js';
 import { addPerson, removePerson, renamePerson, renderPeople } from './people.js';
 import { exactPerson, normName, pkey, reconcilePeople, suggestPeople } from './people-model.js';
+import { setJournal, setJournalDay, shiftJournal } from './journal.js';
 import { flash, render } from './render.js';
 import { $, LS_DASH, LS_PARK, LS_PPL, isDone, ov, st, ui } from './state.js';
 import { toast } from './status.js';
@@ -94,6 +95,7 @@ list.addEventListener('click', e => {
   const li = b.closest('[data-id]'), id = li && li.dataset.id;
   switch (b.dataset.act) {
     case 'edit': startEdit(id); break;
+    case 'hist': ui.histOpen.has(id) ? ui.histOpen.delete(id) : ui.histOpen.add(id); renderList(); break;
     case 'cancel': st.editing = null; renderList(); break;
     case 'day': { const ds = b.dataset.day; ui.dayState.set(ds, b.getAttribute('aria-expanded') !== 'true'); renderList(); break; }
     case 'del': deleteTask(id); break;
@@ -128,6 +130,12 @@ list.addEventListener('keydown', e => {
 $('#daysAll').addEventListener('click', () => { st.tasks.forEach(t => { if (!isParked(t)) ui.dayState.set(t.datum, true); }); renderList(); });
 $('#daysToday').addEventListener('click', () => { ui.dayState.clear(); renderList(); });
 $('#parkToggle').addEventListener('click', () => setParkOpen(!ov.park));
+$('#btnJournal').addEventListener('click', () => setJournal(!ov.journal));
+$('#journalClose').addEventListener('click', () => setJournal(false));
+$('#jPrev').addEventListener('click', () => shiftJournal(-1));
+$('#jNext').addEventListener('click', () => shiftJournal(1));
+$('#jToday').addEventListener('click', () => setJournalDay(todayStr()));
+$('#jDay').addEventListener('change', e => setJournalDay(e.target.value));
 $('#btnPark').addEventListener('click', () => { if (!ov.park) setParkOpen(true); $('#park').scrollIntoView({ behavior:'smooth', block:'start' }); });
 
 document.addEventListener('keydown', e => {

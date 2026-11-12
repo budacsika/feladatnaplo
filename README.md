@@ -16,7 +16,7 @@ Személyes feladatnapló egyetlen HTML fájlban. Edge-ben vagy Chrome-ban fut, t
 
 1. Másold a `feladatnaplo.html` fájlt abba a mappába, ahol az adatokat tárolni szeretnéd (pl. `00_MUNKA\mytask`).
 2. Nyisd meg Edge-ben vagy Chrome-ban, és az első indításkor a jobb felső állapotjelzőre kattintva válaszd ki ugyanazt a mappát. A böngésző megjegyzi, később egy kattintás elég az újracsatlakozáshoz.
-3. A program ebbe a mappába írja a `feladatnaplo.csv` és a `megbizok.csv` fájlt. A napi biztonsági másolatok a `mentesek` almappába kerülnek (az utolsó 60-at tartja meg).
+3. A program ebbe a mappába írja a `feladatnaplo.csv`, a `megbizok.csv` és a `tortenet.csv` fájlt. A napi biztonsági másolatok a `mentesek` almappába kerülnek (az utolsó 60-at tartja meg).
 
 Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-kben maradnak.
 
@@ -48,6 +48,14 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 - Egy kattintással (Ma / Holnap / választott nap) átkerülnek a rendes feladatok közé; a szerkesztő nézetből vissza is tehetők
 - Keresés a Tárolóban is szűr
 
+**Előzmények és napi napló**
+- Minden változás naplózódik: létrehozás, lezárás / újranyitás, határidő-, megbízó-, nap- és szövegmódosítás, tárolóba tétel és kivétel, törlés és visszavonás. A napló a `tortenet.csv`-be kerül, és csak bővül: a sorok sosem módosulnak.
+- Feladatonkénti idővonal: a sor végén az óra ikonra kattintva a feladat alatt kinyílik a története (pl. `11.09. 09:12 Létrehozva`, `11.09. 10:35 Határidő: … → …`, `11.09. 14:20 Lezárva`). A Tárolóban lévő tételeknél is működik.
+- Napi napló: a „Napló" gombbal megnyíló panel egy nap összes eseményét mutatja időrendben (a törölt feladatokét is), ‹ › gombokkal és dátumválasztóval lapozható.
+- A naplózás előtt felvett feladatoknál a létrehozás és a lezárás ideje a feladat saját időbélyegeiből látszik (halványabban). A külső módosítások (pl. Excelből szerkesztett CSV) nem számítanak a program saját változtatásának, ezért nem kerülnek a naplóba.
+- Több gép / fájl között azonosító szerinti unióval egyesül, így nem vész el esemény.
+- A napló nem kerül a nyomtatásba.
+
 **Keresés és szűrés**
 - Élő, ékezet- és kisbetű-független keresés; `#címke` és `@megbízó` is használható
 - Állapot- és időszakszűrő; nyomtatás / PDF az aktuális szűrés szerint
@@ -73,6 +81,7 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
   - `statusz`: `nyitott` vagy `kesz`; `tarolo`: `igen`, ha a feladat a Tárolóban van (üres egyébként)
   - a `hatarido` dátum vagy dátum+idő (`2026-11-12T16:00`)
 - `megbizok.csv`: `nev;megjegyzes;aktiv` (`igen` / `nem`)
+- `tortenet.csv`: `id;feladat;idopont;mezo;regi;uj`, egy sor egy esemény (`feladat` = a feladat azonosítója). `mezo`: `letrehozva`, `torolve`, `visszaallitva`, vagy a változott oszlop neve (`statusz`, `hatarido`, `megbizo`, `datum`, `feladat`, `tarolo`); `regi` / `uj` a régi és az új érték. Ne szerkeszd kézzel: a sorok azonosító szerint egyesülnek, az érvénytelen sorokat a program eldobja.
 - UTF-8 BOM, `;` elválasztó, CRLF sorvég. Excelben szerkeszthető; a beolvasás oszlopsorrend-független, felismeri a `,`/tabulátor elválasztót és az Excel-es dátumformátumokat (`2026.11.09`).
 - Régebbi formátumok (fejléc nélküli `datum;feladat`, `cimke` oszlopos) betöltéskor automatikusan átalakulnak, előtte külön `…_atalakitas-elott.csv` másolat készül a `mentesek` mappában.
 
@@ -87,13 +96,14 @@ src/
   app.js                belépési pont (indítás, óra)
   events.js             eseménykötések
   state.js              közös állapot: st (adatok), ui (szűrők), ov (nézetek)
-  util.js tasks.js csv.js people-model.js stats.js     DOM-mentes logika (ezt tesztelik a Node-tesztek)
-  filter.js list.js park.js dash.js render.js status.js people.js autocomplete.js     megjelenítés
+  util.js tasks.js csv.js people-model.js stats.js history.js     DOM-mentes logika (ezt tesztelik a Node-tesztek)
+  filter.js list.js park.js dash.js journal.js render.js status.js people.js autocomplete.js     megjelenítés
   storage.js            mentés/betöltés: mappa, IndexedDB, mentések, külső változás
+  audit.js              változás-észlelés: a mentés előtt az eltérésekből előzmény-események lesznek
   actions.js clock.js   feladatműveletek, óra
 ```
 
-A DOM-mentes modulok (`util`, `tasks`, `csv`, `people-model`, `stats`) nem importálnak a `state.js`-ből, ezért Node-ban közvetlenül tesztelhetők. A verziószámot a `package.json` adja, a build beleteszi a felületbe.
+A DOM-mentes modulok (`util`, `tasks`, `csv`, `people-model`, `stats`, `history`) nem importálnak a `state.js`-ből, ezért Node-ban közvetlenül tesztelhetők. A verziószámot a `package.json` adja, a build beleteszi a felületbe.
 
 ```
 npm install
@@ -104,8 +114,8 @@ npm run test:pure # csak a logika
 npm run test:ui   # csak a böngészős teszt
 ```
 
-- `tests/pure.test.js`: CSV beolvasás/kiírás és migráció, határidő-állapotok, heti/havi statisztika, rendezés, megbízók (egyezés, javaslat, összefésülés), Tároló.
-- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
+- `tests/pure.test.js`: CSV beolvasás/kiírás és migráció, dátum- és időellenőrzés, határidő-állapotok, heti/havi statisztika, rendezés, megbízók (egyezés, javaslat, összefésülés), Tároló, előzmények (változás-észlelés, CSV, egyesítés, leírások, idővonal, napi napló).
+- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, előzményeket és a napi naplót, nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
 - A UI-teszt Chrome-ot keres a szokásos helyeken; ha máshol van, add meg a `CHROME_PATH` környezeti változóval.
 
 Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verziókezelésbe.
@@ -117,6 +127,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 | 2.6 | Összecsukható napok (alapból csak a mai nyitott) |
 | 2.6.1 | Szigorúbb dátum- és időellenőrzés (feb. 31., szökőév, óra/perc tartomány) |
 | 2.7.0 | Moduláris forrás (`src/`), egyfájlos build (esbuild); a működés változatlan |
+| 2.8.0 | Előzmények: `tortenet.csv`, feladatonkénti idővonal és napi napló |
 | 2.5 | Tároló: nem ütemezett feladatok, `tarolo` oszlop |
 | 2.4 | Heti és havi áttekintés újratervezve, többsoros határidő-lista |
 | 2.3 | Napi státusz lapos sávban felül, heti/havi/megbízói blokk alul, kiemelt felviteli űrlap |

@@ -220,7 +220,7 @@ button{cursor:pointer}
 .day h2 small{font:400 10.5px var(--mono);letter-spacing:.05em;color:var(--dim)}
 .day.is-today h2{color:var(--gold);text-shadow:0 0 10px rgba(255,194,51,.4)}
 .day ul{list-style:none;margin:0;padding:0;overflow:hidden;border:1px solid var(--line);border-radius:3px;background:var(--panel)}
-.task{display:grid;grid-template-columns:18px minmax(0,1fr) auto 28px;grid-template-areas:"chk body due edit";gap:4px 10px;align-items:start;padding:8px 10px;border-top:1px solid rgba(80,200,255,.09);transition:background .15s}
+.task{display:grid;grid-template-columns:18px minmax(0,1fr) auto auto;grid-template-areas:"chk body due edit";gap:4px 10px;align-items:start;padding:8px 10px;border-top:1px solid rgba(80,200,255,.09);transition:background .15s}
 .task:first-child{border-top:0}
 .task:hover{background:rgba(53,224,255,.045)}
 .chk{grid-area:chk;appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:1px 0 0;border:1px solid var(--cyan2);border-radius:2px;background:rgba(2,10,16,.8);display:grid;place-content:center;cursor:pointer}
@@ -317,18 +317,42 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   .pkrow{grid-template-columns:minmax(0,1fr)} .pk-act{flex-wrap:wrap}
   .prow{grid-template-columns:minmax(0,1fr) 40px 46px auto} .prow>:nth-child(2),.prow>:nth-child(5),.prow>:nth-child(6){display:none}
   .ppl-add{margin-left:0;width:100%} .ppl-add input{flex:1;width:auto}
-  .task{grid-template-columns:18px minmax(0,1fr) 28px;grid-template-areas:"chk body edit" ". due ."}
+  .task{grid-template-columns:18px minmax(0,1fr) auto;grid-template-areas:"chk body edit" ". due ."}
   .dl{justify-self:start}
   .hud-clock{margin-left:0}
   h1{letter-spacing:.14em}
 }
+
+/* előzmények (feladatonként) és napló */
+.acts{grid-area:edit;display:flex;gap:2px;align-items:flex-start}
+.acts .icon,.pk-act .icon{grid-area:auto}
+.icon svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+@media (hover:hover){ .icon.on{opacity:1;color:var(--cyan)} }
+.icon.on{color:var(--cyan);background:rgba(53,224,255,.12)}
+.hist{list-style:none;padding:2px 10px 9px 38px;border-top:0!important;background:rgba(53,224,255,.03)}
+.hist ol,.jl{list-style:none;margin:0;padding:0}
+.hist ol{border-left:1px solid rgba(53,224,255,.25);padding-left:12px}
+.hist li{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;padding:2px 0;font-size:12.5px;color:var(--ink)}
+.hist li.old,.jl li.old{opacity:.7}
+.hist time,.jl time{font:11.5px var(--mono);color:var(--muted);white-space:nowrap}
+.pk-list .hist{padding-left:14px;background:rgba(168,139,255,.04);border-top:0}
+.journal{margin-top:22px} .journal .ph{flex-wrap:wrap}
+.jnav{display:flex;gap:4px;align-items:center}
+.jnav input[type=date]{width:136px;padding:4px 6px;font-size:12px}
+.journal .jclose{margin-left:auto}
+.jl li{display:grid;grid-template-columns:44px minmax(120px,max-content) minmax(0,1fr);gap:10px;align-items:baseline;padding:5px 2px;border-top:1px solid rgba(80,200,255,.09);font-size:13px}
+.jl li:first-child{border-top:0}
+.jl .jt{color:var(--cyan)}
+.jl .jx{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.jl li.gone .jx{color:var(--dim);text-decoration:line-through}
+@media (max-width:620px){ .jl li{grid-template-columns:44px minmax(0,1fr)} .jl .jx{grid-column:2} .hist li{grid-template-columns:90px minmax(0,1fr)} }
 
 /* nyomtatás / PDF */
 @media print{
   @page{margin:13mm}
   html{color-scheme:light}
   body{background:#fff!important;color:#111;font-size:10.5pt}
-  body::before,.top,.cmd,#today,#park,#overview,.dash,.dash-bar,.people,.ac,.filters,.foot,.icon,#toast,.meta{display:none!important}
+  body::before,.top,.cmd,#today,#park,#journal,.hist,#overview,.dash,.dash-bar,.people,.ac,.filters,.foot,.icon,#toast,.meta{display:none!important}
   .print-head{display:block;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #111}
   .print-head h1{font-size:16pt;letter-spacing:.1em;text-shadow:none;color:#111}
   .print-head .pm{font:9pt var(--mono);color:#333;margin-top:2px}
@@ -414,6 +438,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       <option value="30">Utolsó 30 nap</option>
     </select>
     <button type="button" class="ghost park-b" id="btnPark" title="Nem ütemezett feladatok">Tároló (0)</button>
+    <button type="button" class="ghost" id="btnJournal" aria-pressed="false" title="Egy nap eseményei időrendben">Napló</button>
     <button type="button" class="ghost" id="btnPrint" title="Az aktuális szűrés nyomtatása vagy mentése PDF-ként">Nyomtatás / PDF</button>
   </div>
   <div class="meta"><span id="meta"></span><span class="meta-act"><button type="button" class="mini" id="daysAll" title="Minden nap kinyitása">mind kinyit</button><button type="button" class="mini" id="daysToday" title="Csak a mai nap maradjon nyitva">csak ma</button></span></div>
@@ -423,6 +448,13 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   <section id="park" class="panel park" aria-label="Tároló">
     <div class="ph"><span class="cap"><i class="pkd-dot"></i>Tároló · nem ütemezett</span><span class="rng mono" id="parkCount"></span><span class="note">nem számít bele a statisztikába</span><button type="button" class="mini" id="parkToggle">összecsukás</button></div>
     <div id="parkBody"></div>
+  </section>
+
+  <section id="journal" class="panel journal" aria-label="Napló" hidden>
+    <div class="ph"><span class="cap">Napló · mi történt aznap</span>
+      <span class="jnav"><button type="button" class="mini" id="jPrev" title="Előző nap" aria-label="Előző nap">‹</button><input type="date" id="jDay" aria-label="Nap"><button type="button" class="mini" id="jNext" title="Következő nap" aria-label="Következő nap">›</button><button type="button" class="mini" id="jToday">ma</button></span>
+      <span class="rng mono" id="jCount"></span><button type="button" class="mini jclose" id="journalClose">elrejtés</button></div>
+    <div id="journalBody"></div>
   </section>
 
   <section id="overview" class="overview">
@@ -452,7 +484,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 'use strict';
 (() => {
   // src/state.js
-  var VERSION = true ? "2.7.0" : "dev";
+  var VERSION = true ? "2.8.0" : "dev";
   var FILE_NAME = "feladatnaplo.csv";
   var BACKUP_DIR = "mentesek";
   var BACKUP_KEEP = 60;
@@ -465,6 +497,9 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   var LS_PPL = "feladatnaplo.ppl";
   var LS_PARK = "feladatnaplo.park";
   var PEOPLE_FILE = "megbizok.csv";
+  var HIST_FILE = "tortenet.csv";
+  var LS_H = "feladatnaplo.v1.hist";
+  var LS_JRN = "feladatnaplo.journal";
   var st = {
     tasks: [],
     deleted: /* @__PURE__ */ new Set(),
@@ -484,9 +519,13 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     deletedP: /* @__PURE__ */ new Set(),
     fhP: null,
     lastModP: 0,
-    dirtyP: false
+    dirtyP: false,
+    hist: [],
+    fhH: null,
+    lastModH: 0,
+    dirtyH: false
   };
-  var ui = { search: "", status: "all", period: "all", dayState: /* @__PURE__ */ new Map() };
+  var ui = { search: "", status: "all", period: "all", dayState: /* @__PURE__ */ new Map(), histOpen: /* @__PURE__ */ new Set() };
   var ov = { w: 0, m: 0, park: (() => {
     try {
       return localStorage.getItem(LS_PARK) !== "0";
@@ -499,7 +538,13 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     } catch {
       return false;
     }
-  })(), pPeriod: "all", pEdit: null, hidden: (() => {
+  })(), pPeriod: "all", pEdit: null, journal: (() => {
+    try {
+      return localStorage.getItem(LS_JRN) === "1";
+    } catch {
+      return false;
+    }
+  })(), jDay: "", hidden: (() => {
     try {
       return localStorage.getItem(LS_DASH) === "0";
     } catch {
@@ -822,6 +867,127 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     const lines = [HEADER.join(";")];
     for (const t of list) lines.push(HEADER.map((k) => k === "feladat" ? csvq(t[k]) : csvf(t[k])).join(";"));
     return "\uFEFF" + lines.join("\r\n") + "\r\n";
+  }
+
+  // src/history.js
+  var HIST_HEADER = ["id", "feladat", "idopont", "mezo", "regi", "uj"];
+  var TRACKED = ["datum", "feladat", "megbizo", "hatarido", "statusz", "tarolo"];
+  var KINDS = /* @__PURE__ */ new Set([...TRACKED, "letrehozva", "torolve", "visszaallitva"]);
+  var str = (v) => String(v ?? "");
+  var snapOf = (t) => ({ datum: str(t.datum), feladat: str(t.feladat), megbizo: str(t.megbizo), hatarido: str(t.hatarido), statusz: str(t.statusz), tarolo: str(t.tarolo) });
+  var makeSnap = (tasks) => new Map(tasks.map((t) => [t.id, snapOf(t)]));
+  var byTime = (a, b) => a.idopont < b.idopont ? -1 : a.idopont > b.idopont ? 1 : 0;
+  function diffTasks(snap2, tasks, known, now) {
+    const next = makeSnap(tasks), events = [];
+    const ev = (id, at, mezo, regi, uj) => events.push({ id: newId(), feladat: id, idopont: at, mezo, regi: str(regi), uj: str(uj) });
+    for (const t of tasks) {
+      const prev = snap2.get(t.id), cur = next.get(t.id);
+      if (!prev) {
+        if (known.has(t.id)) ev(t.id, now, "visszaallitva", "", t.feladat);
+        else {
+          ev(t.id, normStamp(t.letrehozva) || now, "letrehozva", "", t.feladat);
+          if (cur.tarolo === "igen") ev(t.id, now, "tarolo", "", "igen");
+        }
+        continue;
+      }
+      for (const k of TRACKED) if (prev[k] !== cur[k]) ev(t.id, now, k, prev[k], cur[k]);
+    }
+    for (const [id, p] of snap2) if (!next.has(id)) ev(id, now, "torolve", p.feladat, "");
+    return { events, snap: next };
+  }
+  function mergeHistory(target, incoming) {
+    const have = new Set(target.map((e) => e.id));
+    let n = 0;
+    for (const e of incoming) if (!have.has(e.id)) {
+      target.push(e);
+      have.add(e.id);
+      n++;
+    }
+    if (n) target.sort(byTime);
+    return n;
+  }
+  function histToCSV(events) {
+    const lines = [HIST_HEADER.join(";")];
+    for (const e of [...events].sort(byTime)) lines.push(HIST_HEADER.map((k) => csvf(e[k])).join(";"));
+    return "\uFEFF" + lines.join("\r\n") + "\r\n";
+  }
+  function parseHistory(raw) {
+    const text = String(raw || "").replace(/^﻿/, "");
+    if (!text.trim()) return [];
+    const rows = parseCSV(text, detectDelimiter(text));
+    if (!rows.length) return [];
+    const head = rows[0].map((s) => s.trim().toLowerCase()), col = (k) => head.indexOf(k);
+    if (col("id") < 0 || col("feladat") < 0 || col("idopont") < 0 || col("mezo") < 0) return [];
+    const g = (r, k) => col(k) >= 0 && r[col(k)] !== void 0 ? r[col(k)] : "";
+    const out = [], seen = /* @__PURE__ */ new Set();
+    for (const r of rows.slice(1)) {
+      const id = g(r, "id").trim(), at = normStamp(g(r, "idopont")), mezo = g(r, "mezo").trim();
+      if (!id || seen.has(id) || !g(r, "feladat").trim() || !at || !KINDS.has(mezo)) continue;
+      seen.add(id);
+      out.push({ id, feladat: g(r, "feladat").trim(), idopont: at, mezo, regi: g(r, "regi"), uj: g(r, "uj") });
+    }
+    return out.sort(byTime);
+  }
+  var dt = (s) => str(s).replace("T", " ");
+  var dash = (s) => s || "\u2013";
+  var clip = (s, n = 60) => {
+    s = str(s).replace(/\s+/g, " ").trim();
+    return s.length > n ? s.slice(0, n - 1) + "\u2026" : s;
+  };
+  function describeEvent(e) {
+    switch (e.mezo) {
+      case "letrehozva":
+        return "L\xE9trehozva";
+      case "torolve":
+        return "T\xF6r\xF6lve";
+      case "visszaallitva":
+        return "Vissza\xE1ll\xEDtva";
+      case "statusz":
+        return e.uj === "kesz" ? "Lez\xE1rva" : "\xDAjranyitva";
+      case "hatarido":
+        return !e.regi ? `Hat\xE1rid\u0151 megadva: ${dt(e.uj)}` : !e.uj ? `Hat\xE1rid\u0151 t\xF6r\xF6lve (volt: ${dt(e.regi)})` : `Hat\xE1rid\u0151: ${dt(e.regi)} \u2192 ${dt(e.uj)}`;
+      case "megbizo":
+        return `Megb\xEDz\xF3: ${dash(e.regi)} \u2192 ${dash(e.uj)}`;
+      case "datum":
+        return `Nap: ${dash(e.regi)} \u2192 ${dash(e.uj)}`;
+      case "feladat":
+        return `Sz\xF6veg m\xF3dos\xEDtva: \u201E${clip(e.regi, 40)}\u201D \u2192 \u201E${clip(e.uj, 40)}\u201D`;
+      case "tarolo":
+        return e.uj === "igen" ? "T\xE1rol\xF3ba t\xE9ve" : "T\xE1rol\xF3b\xF3l kiv\xE9ve";
+      default:
+        return e.mezo;
+    }
+  }
+  var fmtWhen = (at) => str(at).slice(5, 10).replace("-", ".") + ". " + str(at).slice(11, 16);
+  function timelineFor(t, evs) {
+    const out = evs.map((e) => ({ at: e.idopont, text: describeEvent(e), e }));
+    if (t) {
+      if (t.letrehozva && !evs.some((e) => e.mezo === "letrehozva")) out.push({ at: normStamp(t.letrehozva) || t.letrehozva, text: "L\xE9trehozva", old: true });
+      if (t.statusz === "kesz" && t.lezarva && !evs.some((e) => e.mezo === "statusz" && e.uj === "kesz")) out.push({ at: normStamp(t.lezarva) || t.lezarva, text: "Lez\xE1rva", old: true });
+    }
+    return out.sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
+  }
+  function lastText(evs) {
+    for (let i = evs.length - 1; i >= 0; i--) {
+      const e = evs[i];
+      if (e.mezo === "torolve") return e.regi;
+      if (e.mezo === "feladat" || e.mezo === "letrehozva" || e.mezo === "visszaallitva") return e.uj;
+    }
+    return "";
+  }
+  function journalDay(tasks, hist, day) {
+    const by = /* @__PURE__ */ new Map();
+    for (const e of hist) {
+      let a = by.get(e.feladat);
+      if (!a) by.set(e.feladat, a = []);
+      a.push(e);
+    }
+    const byId = new Map(tasks.map((t) => [t.id, t])), out = [];
+    for (const id of /* @__PURE__ */ new Set([...by.keys(), ...byId.keys()])) {
+      const t = byId.get(id), evs = by.get(id) || [], label = t ? t.feladat : lastText(evs);
+      for (const x of timelineFor(t, evs)) if (str(x.at).slice(0, 10) === day) out.push({ at: x.at, id, text: x.text, task: label, old: !!x.old, gone: !t });
+    }
+    return out.sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0);
   }
 
   // src/people-model.js
@@ -1154,6 +1320,38 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     box.innerHTML = weekHTML + monthHTML;
   }
 
+  // src/journal.js
+  function renderJournal() {
+    $("#journal").hidden = !ov.journal;
+    $("#btnJournal").setAttribute("aria-pressed", String(ov.journal));
+    if (!ov.journal) return;
+    const day = ov.jDay || todayStr(), inp = $("#jDay");
+    if (document.activeElement !== inp) inp.value = day;
+    const ev = journalDay(st.tasks, st.hist, day);
+    $("#jCount").textContent = ev.length ? `${ev.length} esem\xE9ny` : "";
+    $("#journalBody").innerHTML = ev.length ? `<ol class="jl">${ev.map((x) => `<li${x.old || x.gone ? ` class="${x.old ? "old" : ""}${x.gone ? " gone" : ""}"` : ""}><time>${esc(x.at.slice(11, 16))}</time><span class="jt">${esc(x.text)}</span><span class="jx">${esc(clip(x.task, 90))}</span></li>`).join("")}</ol>` : `<div class="empty sm">${day === todayStr() ? "Ma m\xE9g nincs r\xF6gz\xEDtett esem\xE9ny." : "Ezen a napon nincs r\xF6gz\xEDtett esem\xE9ny."}</div>`;
+  }
+  function setJournal(on) {
+    ov.journal = on;
+    try {
+      localStorage.setItem(LS_JRN, on ? "1" : "0");
+    } catch {
+    }
+    renderJournal();
+    if (on) $("#journal").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function setJournalDay(ds) {
+    if (ds && ds >= "2000-01-01") {
+      ov.jDay = ds;
+      renderJournal();
+    }
+  }
+  function shiftJournal(n) {
+    const d = /* @__PURE__ */ new Date((ov.jDay || todayStr()) + "T12:00:00");
+    d.setDate(d.getDate() + n);
+    setJournalDay(dstr(d));
+  }
+
   // src/status.js
   var toastTimer;
   function toast(msg, action, fn) {
@@ -1209,6 +1407,26 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     p.title = txt;
   }
 
+  // src/audit.js
+  var snap = null;
+  function resetSnap() {
+    snap = makeSnap(st.tasks);
+  }
+  function logChanges() {
+    if (!snap) {
+      resetSnap();
+      return false;
+    }
+    const known = /* @__PURE__ */ new Set();
+    for (const e of st.hist) known.add(e.feladat);
+    const r = diffTasks(snap, st.tasks, known, stamp());
+    snap = r.snap;
+    if (!r.events.length) return false;
+    for (const e of r.events) st.hist.push(e);
+    st.dirtyH = true;
+    return true;
+  }
+
   // src/storage.js
   var idb = () => new Promise((res, rej) => {
     const r = indexedDB.open(DB_NAME, 1);
@@ -1239,6 +1457,10 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       localStorage.setItem(LS_P, peopleToCSV(st.people));
     } catch {
     }
+    try {
+      localStorage.setItem(LS_H, histToCSV(st.hist));
+    } catch {
+    }
   };
   var loadMirror = () => {
     try {
@@ -1247,8 +1469,11 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       const rp = localStorage.getItem(LS_P);
       st.people = rp ? parsePeople(rp) : seedPeople(st.tasks);
       reconcilePeople(st.tasks, st.people);
+      const rh = localStorage.getItem(LS_H);
+      st.hist = rh ? parseHistory(rh) : [];
     } catch {
     }
+    resetSnap();
   };
   var getOffline = () => {
     try {
@@ -1314,6 +1539,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     try {
       st.fh = await st.dir.getFileHandle(FILE_NAME, { create: true });
       st.fhP = await st.dir.getFileHandle(PEOPLE_FILE, { create: true });
+      st.fhH = await st.dir.getFileHandle(HIST_FILE, { create: true });
       const file = await st.fh.getFile();
       st.lastMod = file.lastModified;
       const raw = await decodeFile(file);
@@ -1332,6 +1558,11 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       st.lastModP = fileP.lastModified;
       const rawP = await decodeFile(fileP), diskP = rawP.trim() ? parsePeople(rawP) : null;
       if (rawP.trim()) await dailyBackup(rawP, "megbizok");
+      const fileH = await st.fhH.getFile();
+      st.lastModH = fileH.lastModified;
+      const rawH = await decodeFile(fileH);
+      if (rawH.trim()) await dailyBackup(rawH, "tortenet");
+      mergeHistory(st.hist, parseHistory(rawH));
       const off = getOffline();
       if (off) {
         mergeInto(st.tasks, disk, st.deleted);
@@ -1342,13 +1573,15 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       }
       const rec = reconcilePeople(st.tasks, st.people);
       st.mode = "folder";
+      resetSnap();
       render();
       persistLocal();
       const needT = off || !raw.trim() || rec.renamed > 0 || raw !== toCSV(st.tasks).slice(1);
       const needP = off || !diskP || rec.added.length > 0 || rawP !== peopleToCSV(st.people).slice(1);
       if (needT) st.dirty = true;
       if (needP) st.dirtyP = true;
-      if (needT || needP) await flush();
+      if (rawH !== histToCSV(st.hist).slice(1)) st.dirtyH = true;
+      if (needT || needP || st.dirtyH) await flush();
       else st.savedAt = /* @__PURE__ */ new Date();
       const msg = [];
       if (kind === "v1" || kind === "v0") msg.push("A CSV \xE1talak\xEDtva az \xFAj szerkezetre. Az eredeti a \u201Ementesek\u201D mapp\xE1ban van.");
@@ -1394,6 +1627,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     }
   }
   function queueSave(kind) {
+    logChanges();
     if (kind === "p") st.dirtyP = true;
     else st.dirty = true;
     persistLocal();
@@ -1413,7 +1647,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     st.err = null;
     renderStatus();
     try {
-      while (st.dirty || st.dirtyP) {
+      while (st.dirty || st.dirtyP || st.dirtyH) {
         if (st.dirtyP) {
           st.dirtyP = false;
           const fp = await st.fhP.getFile();
@@ -1426,6 +1660,15 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
           await wp.close();
           st.lastModP = (await st.fhP.getFile()).lastModified;
         }
+        if (st.dirtyH) {
+          st.dirtyH = false;
+          const fh = await st.fhH.getFile();
+          if (fh.lastModified !== st.lastModH) mergeHistory(st.hist, parseHistory(await decodeFile(fh)));
+          const wh = await st.fhH.createWritable();
+          await wh.write(histToCSV(st.hist));
+          await wh.close();
+          st.lastModH = (await st.fhH.getFile()).lastModified;
+        }
         if (st.dirty) {
           st.dirty = false;
           const f = await st.fh.getFile();
@@ -1436,6 +1679,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
               return;
             }
             mergeInto(st.tasks, p.tasks, st.deleted);
+            resetSnap();
             render();
           }
           const w = await st.fh.createWritable();
@@ -1449,6 +1693,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     } catch (e) {
       st.dirty = true;
       st.dirtyP = true;
+      st.dirtyH = true;
       st.err = e;
       if (e && e.name === "NotAllowedError") st.mode = "needperm";
       else st.retryTimer = setTimeout(flush, 15e3);
@@ -1458,7 +1703,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     }
   }
   async function checkExternal() {
-    if (st.mode !== "folder" || st.dirty || st.dirtyP || st.saving || st.editing || ov.pEdit != null || !st.fh) return;
+    if (st.mode !== "folder" || st.dirty || st.dirtyP || st.dirtyH || st.saving || st.editing || ov.pEdit != null || !st.fh) return;
     try {
       let changed = false;
       const f = await st.fh.getFile();
@@ -1492,8 +1737,14 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
           changed = true;
         }
       }
+      const fhh = await st.fhH.getFile();
+      if (fhh.lastModified !== st.lastModH) {
+        st.lastModH = fhh.lastModified;
+        if (mergeHistory(st.hist, parseHistory(await decodeFile(fhh)))) changed = true;
+      }
       if (!changed) return;
       const rec = reconcilePeople(st.tasks, st.people);
+      resetSnap();
       if (rec.added.length) st.dirtyP = true;
       if (rec.renamed) st.dirty = true;
       render();
@@ -1623,6 +1874,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     renderDash();
     renderPeople();
     renderList();
+    renderJournal();
   }
   function flash(id, noScroll) {
     const tk = st.tasks.find((x) => x.id === id);
@@ -1649,7 +1901,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
       <button type="button" class="mini" data-act="pkmove" data-to="tom" title="\xC1thelyez\xE9s holnapra">Holnap</button>
       <input type="date" class="pk-date" aria-label="\xC1thelyez\xE9s erre a napra" title="V\xE1lassz napot, majd nyomd meg a nyilat">
       <button type="button" class="mini" data-act="pkgo" title="\xC1thelyez\xE9s a kiv\xE1lasztott napra">\u2192</button>
-      <button type="button" class="icon" data-act="edit" title="Szerkeszt\xE9s" aria-label="Szerkeszt\xE9s">\u270E</button>
+      ${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkeszt\xE9s" aria-label="Szerkeszt\xE9s">\u270E</button>
     </div></li>`;
   }
   function renderPark() {
@@ -1665,7 +1917,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
       box.innerHTML = `<div class="empty sm">${all.length ? "Nincs tal\xE1lat a T\xE1rol\xF3ban." : "A T\xE1rol\xF3 \xFCres. Az \u0171rlapon a \u201Et\xE1rol\xF3ba\u201D jel\xF6l\u0151vel veheted fel azt, aminek m\xE9g nem tudod a d\xE1tum\xE1t."}</div>`;
       return;
     }
-    box.innerHTML = `<ul class="pk-list">${vis.map((t) => st.editing === t.id ? editRow(t) : parkRow(t, terms)).join("")}</ul>`;
+    box.innerHTML = `<ul class="pk-list">${vis.map((t) => st.editing === t.id ? editRow(t) : parkRow(t, terms) + (ui.histOpen.has(t.id) ? histRow(t) : "")).join("")}</ul>`;
   }
   function setParkOpen(on) {
     ov.park = on;
@@ -1728,8 +1980,14 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     <input type="checkbox" class="chk" data-act="toggle" ${done ? "checked" : ""} aria-label="K\xE9sz">
     <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megb\xEDz\xF3 \u2013 kattint\xE1sra sz\u0171r\xE9s">${ICON_USER}${hl(t.megbizo, terms.filter((x) => x[0] !== "@" && x[0] !== "#"))}</button>` : ""}</div>
     ${di ? `<span class="chip dl ${di.state}" title="Hat\xE1rid\u0151: ${esc(t.hatarido.replace("T", " "))}">${ICON_CLOCK}${esc(di.label)}</span>` : ""}
-    <button type="button" class="icon" data-act="edit" title="Szerkeszt\xE9s" aria-label="Szerkeszt\xE9s">\u270E</button></li>`;
+    <span class="acts">${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkeszt\xE9s" aria-label="Szerkeszt\xE9s">\u270E</button></span></li>`;
   }
+  var histBtn = (id) => `<button type="button" class="icon hist-b${ui.histOpen.has(id) ? " on" : ""}" data-act="hist" title="El\u0151zm\xE9nyek" aria-label="El\u0151zm\xE9nyek" aria-expanded="${ui.histOpen.has(id)}">${ICON_CLOCK}</button>`;
+  function histRow(t) {
+    const tl = timelineFor(t, st.hist.filter((e) => e.feladat === t.id));
+    return `<li class="hist" data-for="${esc(t.id)}"><ol>${tl.map((x) => `<li${x.old ? ' class="old" title="A napl\xF3z\xE1s el\u0151tti id\u0151b\xE9lyegb\u0151l"' : ""}><time>${esc(fmtWhen(x.at))}</time><span>${esc(x.text)}</span></li>`).join("")}</ol></li>`;
+  }
+  var taskRows = (t, terms, now) => st.editing === t.id ? editRow(t) : viewRow(t, terms, now) + (ui.histOpen.has(t.id) ? histRow(t) : "");
   function editRow(t) {
     return `<li class="task editing" data-id="${esc(t.id)}"><form class="edit" data-id="${esc(t.id)}">
     <textarea name="feladat" rows="2" aria-label="Feladat">${esc(t.feladat)}</textarea>
@@ -1776,7 +2034,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
         const op = isOpen(cur), nOpen = cnt[cur] - (dn[cur] || 0);
         html += `<section class="day${cur === today ? " is-today" : ""}${op ? "" : " collapsed"}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? "\xD6sszecsuk\xE1s" : "Kinyit\xE1s"}"><span class="chev">\u25BE</span>${esc(dayLabel(cur))}</button><small>${dn[cur] || 0}/${cnt[cur]} k\xE9sz${!op && nOpen ? ` \xB7 <b>${nOpen} nyitott</b>` : ""}</small></h2><ul>`;
       }
-      html += st.editing === t.id ? editRow(t) : viewRow(t, terms, now);
+      html += taskRows(t, terms, now);
     }
     list.innerHTML = html + "</ul></section>";
   }
@@ -2192,6 +2450,10 @@ Biztosan \xFAj megb\xEDz\xF3t veszel fel: \u201E${n}\u201D?`)) return;
         case "edit":
           startEdit(id);
           break;
+        case "hist":
+          ui.histOpen.has(id) ? ui.histOpen.delete(id) : ui.histOpen.add(id);
+          renderList();
+          break;
         case "cancel":
           st.editing = null;
           renderList();
@@ -2274,6 +2536,12 @@ Biztosan \xFAj megb\xEDz\xF3t veszel fel: \u201E${n}\u201D?`)) return;
     renderList();
   });
   $("#parkToggle").addEventListener("click", () => setParkOpen(!ov.park));
+  $("#btnJournal").addEventListener("click", () => setJournal(!ov.journal));
+  $("#journalClose").addEventListener("click", () => setJournal(false));
+  $("#jPrev").addEventListener("click", () => shiftJournal(-1));
+  $("#jNext").addEventListener("click", () => shiftJournal(1));
+  $("#jToday").addEventListener("click", () => setJournalDay(todayStr()));
+  $("#jDay").addEventListener("change", (e) => setJournalDay(e.target.value));
   $("#btnPark").addEventListener("click", () => {
     if (!ov.park) setParkOpen(true);
     $("#park").scrollIntoView({ behavior: "smooth", block: "start" });
