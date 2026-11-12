@@ -30,6 +30,12 @@ export function spanOf(s, nowMs, capMs = Infinity){
 }
 export const durMs = (s, nowMs, capMs) => { const x = spanOf(s, nowMs, capMs); return x ? x[1] - x[0] : 0; };
 export const workMsOfTask = (list, taskId, nowMs, capMs) => list.reduce((n, s) => n + (s.feladat_id === taskId ? durMs(s, nowMs, capMs) : 0), 0);
+// feladatonkénti összes mért idő egy menetben (a listához): Map(feladat_id → { ms, n })
+export function workTotals(list, nowMs, capMs){
+  const m = new Map();
+  for (const s of list) { const e = m.get(s.feladat_id) || { ms: 0, n: 0 }; e.ms += durMs(s, nowMs, capMs); e.n++; m.set(s.feladat_id, e); }
+  return m;
+}
 export const dayBounds = day => { const [y, m, d] = day.split('-').map(Number); return [new Date(y, m - 1, d).getTime(), new Date(y, m - 1, d + 1).getTime()]; };
 // egy naptári napra eső munkaidő (az éjfélen átnyúló munkamenetet megosztja a napok között)
 export function workMsOn(list, day, nowMs, capMs){

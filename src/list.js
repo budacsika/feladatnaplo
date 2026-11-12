@@ -5,10 +5,10 @@ import { renderPark } from './park.js';
 import { $, ICON_CLOCK, ICON_PAUSE, ICON_PLAY, ICON_USER, esc, isDone, live, st, ui } from './state.js';
 import { cmpTasks, dueInfo, isParked } from './tasks.js';
 import { todayStr } from './util.js';
-import { activeOf, capOf, durMs, fmtHMS } from './worktime.js';
+import { activeOf, capOf, durMs, fmtHMS, fmtWork, workTotals } from './worktime.js';
 
 /* ---------- lista ---------- */
-export function viewRow(t, terms, now){
+export function viewRow(t, terms, now, wm){
   const done = isDone(t), di = dueInfo(t, now);
   const tip = [t.letrehozva && 'Rögzítve: ' + t.letrehozva.replace('T',' '),
                t.modositva && t.modositva !== t.letrehozva && 'Módosítva: ' + t.modositva.replace('T',' '),
@@ -17,11 +17,17 @@ export function viewRow(t, terms, now){
   const cls = 'task' + (done ? ' done' : '') + (di && !done ? ' st-' + di.state : '') + (working ? ' working' : '');
   return `<li class="${cls}" data-id="${esc(t.id)}">
     <input type="checkbox" class="chk" data-act="toggle" ${done?'checked':''} aria-label="Kész">
-    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${working ? `<span class="chip wk" data-lt title="Folyamatban lévő munkamenet">${fmtHMS(durMs(act, now, capOf(live.gap)))}</span>` : ''}${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megbízó – kattintásra szűrés">${ICON_USER}${hl(t.megbizo, terms.filter(x => x[0] !== '@' && x[0] !== '#'))}</button>` : ''}</div>
+    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${done ? spentChip(t, now, wm) : ''}${working ? `<span class="chip wk" data-lt title="Folyamatban lévő munkamenet">${fmtHMS(durMs(act, now, capOf(live.gap)))}</span>` : ''}${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megbízó – kattintásra szűrés">${ICON_USER}${hl(t.megbizo, terms.filter(x => x[0] !== '@' && x[0] !== '#'))}</button>` : ''}</div>
     ${di ? `<span class="chip dl ${di.state}" title="Határidő: ${esc(t.hatarido.replace('T',' '))}">${ICON_CLOCK}${esc(di.label)}</span>` : ''}
     <span class="acts">${done ? '' : working
       ? `<button type="button" class="icon go-b on" data-act="pause" title="Szüneteltetés" aria-label="Szüneteltetés">${ICON_PAUSE}</button>`
       : `<button type="button" class="icon go-b" data-act="start" title="Munka indítása" aria-label="Munka indítása">${ICON_PLAY}</button>`}${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkesztés" aria-label="Szerkesztés">✎</button></span></li>`;
+}
+
+// kész feladaton: a ráfordított (mért) idő, ha már van adat (fél percnél több)
+function spentChip(t, now, wm){
+  const e = (wm || workTotals(st.sessions, now, capOf(live.gap))).get(t.id);
+  return e && e.ms >= 30e3 ? `<span class="chip tm" title="Ráfordított idő: ${fmtWork(e.ms)} (${e.n} munkamenet)">${fmtWork(e.ms)}</span>` : '';
 }
 
 /* ---------- előzmények ---------- */
@@ -34,7 +40,7 @@ export function histRow(t){
 }
 
 // a sor + (ha nyitva van) az előzményei
-export const taskRows = (t, terms, now) => st.editing === t.id ? editRow(t) : viewRow(t, terms, now) + (ui.histOpen.has(t.id) ? histRow(t) : '');
+export const taskRows = (t, terms, now, wm) => st.editing === t.id ? editRow(t) : viewRow(t, terms, now, wm) + (ui.histOpen.has(t.id) ? histRow(t) : '');
 
 export function editRow(t){
   return `<li class="task editing" data-id="${esc(t.id)}"><form class="edit" data-id="${esc(t.id)}">
@@ -71,6 +77,7 @@ export function renderList(){
   const forced = terms.length > 0 || ui.status !== 'all' || ui.period !== 'all';          // keresés/szűrés közben minden találat látszik
   const editDay = st.editing ? (st.tasks.find(x => x.id === st.editing) || {}).datum : null;
   const isOpen = ds => forced || ds === editDay || (ui.dayState.has(ds) ? ui.dayState.get(ds) : ds === today || cnt[ds] > (dn[ds] || 0));   // alapból nyitva: a mai nap és minden nap, amelyikben van megoldatlan feladat
+  const wm = workTotals(st.sessions, now, capOf(live.gap));
   let html = '', cur = null;
   for (const t of vis) {
     if (t.datum !== cur) {
@@ -79,7 +86,7 @@ export function renderList(){
       const op = isOpen(cur), nOpen = cnt[cur] - (dn[cur]||0);
       html += `<section class="day${cur === today ? ' is-today' : ''}${op ? '' : ' collapsed'}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? 'Összecsukás' : 'Kinyitás'}"><span class="chev">▾</span>${esc(dayLabel(cur))}</button><small>${dn[cur]||0}/${cnt[cur]} kész${!op && nOpen ? ` · <b>${nOpen} nyitott</b>` : ''}</small></h2><ul>`;
     }
-    html += taskRows(t, terms, now);
+    html += taskRows(t, terms, now, wm);
   }
   list.innerHTML = html + '</ul></section>';
 }

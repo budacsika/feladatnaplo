@@ -412,3 +412,5 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .tops .wtaskL .tb i,.tops .whoL .tb i{background:linear-gradient(90deg,#b98200,var(--gold))}
 .tops .wtaskL .tb i{background:linear-gradient(90deg,var(--cyan2),var(--cyan))}
 .tr.tmr{grid-template-columns:minmax(0,1fr) 40px auto}
+.chip.tm{margin-left:8px;color:var(--cyan);border-color:rgba(53,224,255,.3);background:rgba(53,224,255,.05);font-family:var(--mono);opacity:.85}
+.task.done .chip.tm{opacity:.8}

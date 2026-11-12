@@ -64,6 +64,7 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 - **Alvás és óraváltozás**: ha a program 5 percnél hosszabb ideig nem „élt" (alvó gép, zárolás, bezárt fül), vagy az óra elugrott, a mért idő megáll, és a sáv alatt kérdés jelenik meg: *Végig dolgoztam* / *Szünet volt – folytatom most* / *Leállítás itt: …* (időpont megadható). Amíg a kérdés függőben van, csak az ismert idő számít. Rövid kihagyás (pl. oldalfrissítés) nem kérdez.
 - Több fül: ha az egyik fül munkamenetet ír, a többi egyesít; két nyitott munkamenet közül a később indult marad aktív.
 - **Statisztika**: a heti és havi panelen mért idő (összes, napi a heti diagramon), feladatonkénti és megbízónkénti toplista, és a kész feladatok átlagos tényleges ráfordítása. Az **átfutási idő** (létrehozástól lezárásig) külön fogalom, nem keveredik a mért munkaidővel. A Tárolóban lévő feladat ideje beleszámít az időösszegekbe, de a feladat-statisztikába nem.
+- Kész feladaton a sorban látszik a ráfordított idő (az összes munkamenet összege, ha legalább fél perc); az egér fölé víve a munkamenetek száma is.
 - Nem kötelező: időmérés nélkül a program a korábbiak szerint működik; régi CSV-k változtatás nélkül használhatók.
 
 **Keresés és szűrés**
@@ -139,6 +140,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.9.3 | Kész feladatokon látszik a ráfordított (mért) idő, ha van adat |
 | 2.9.2 | Alapból nyitva marad minden nap, amelyben van megoldatlan feladat; „Ma 16:30” gyorsgomb; kompakt heti/havi áttekintő (egysoros mutatósáv, 2×2 toplista) |
 | 2.9.1 | Következő feladatok sáv: a határidő-címke a szöveg fölött, hosszú szöveg két sorra vágva (teljes szöveg a súgóban) |
 | 2.9.0 | Live Desk: munkaidő-mérés (`munkamenetek.csv`), élő sáv, alvás/óraugrás-ellenőrzés, mért idő a statisztikában |

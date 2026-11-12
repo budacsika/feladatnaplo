@@ -419,6 +419,8 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .tops .wtaskL .tb i,.tops .whoL .tb i{background:linear-gradient(90deg,#b98200,var(--gold))}
 .tops .wtaskL .tb i{background:linear-gradient(90deg,var(--cyan2),var(--cyan))}
 .tr.tmr{grid-template-columns:minmax(0,1fr) 40px auto}
+.chip.tm{margin-left:8px;color:var(--cyan);border-color:rgba(53,224,255,.3);background:rgba(53,224,255,.05);font-family:var(--mono);opacity:.85}
+.task.done .chip.tm{opacity:.8}
 </style>
 </head>
 <body>
@@ -533,7 +535,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 'use strict';
 (() => {
   // src/state.js
-  var VERSION = true ? "2.9.2" : "dev";
+  var VERSION = true ? "2.9.3" : "dev";
   var FILE_NAME = "feladatnaplo.csv";
   var BACKUP_DIR = "mentesek";
   var BACKUP_KEEP = 60;
@@ -1082,6 +1084,16 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     return x ? x[1] - x[0] : 0;
   };
   var workMsOfTask = (list, taskId, nowMs, capMs) => list.reduce((n, s) => n + (s.feladat_id === taskId ? durMs(s, nowMs, capMs) : 0), 0);
+  function workTotals(list, nowMs, capMs) {
+    const m = /* @__PURE__ */ new Map();
+    for (const s of list) {
+      const e = m.get(s.feladat_id) || { ms: 0, n: 0 };
+      e.ms += durMs(s, nowMs, capMs);
+      e.n++;
+      m.set(s.feladat_id, e);
+    }
+    return m;
+  }
   var dayBounds = (day) => {
     const [y, m, d] = day.split("-").map(Number);
     return [new Date(y, m - 1, d).getTime(), new Date(y, m - 1, d + 1).getTime()];
@@ -2377,7 +2389,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
   }
 
   // src/list.js
-  function viewRow(t, terms, now) {
+  function viewRow(t, terms, now, wm) {
     const done = isDone(t), di = dueInfo(t, now);
     const tip = [
       t.letrehozva && "R\xF6gz\xEDtve: " + t.letrehozva.replace("T", " "),
@@ -2388,16 +2400,20 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     const cls = "task" + (done ? " done" : "") + (di && !done ? " st-" + di.state : "") + (working ? " working" : "");
     return `<li class="${cls}" data-id="${esc(t.id)}">
     <input type="checkbox" class="chk" data-act="toggle" ${done ? "checked" : ""} aria-label="K\xE9sz">
-    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${working ? `<span class="chip wk" data-lt title="Folyamatban l\xE9v\u0151 munkamenet">${fmtHMS(durMs(act, now, capOf(live.gap)))}</span>` : ""}${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megb\xEDz\xF3 \u2013 kattint\xE1sra sz\u0171r\xE9s">${ICON_USER}${hl(t.megbizo, terms.filter((x) => x[0] !== "@" && x[0] !== "#"))}</button>` : ""}</div>
+    <div class="body" title="${esc(tip)}"><span class="txt">${fmtText(t.feladat, terms)}</span>${done ? spentChip(t, now, wm) : ""}${working ? `<span class="chip wk" data-lt title="Folyamatban l\xE9v\u0151 munkamenet">${fmtHMS(durMs(act, now, capOf(live.gap)))}</span>` : ""}${t.megbizo ? `<button type="button" class="chip who" data-act="who" data-who="${esc(t.megbizo)}" title="Megb\xEDz\xF3 \u2013 kattint\xE1sra sz\u0171r\xE9s">${ICON_USER}${hl(t.megbizo, terms.filter((x) => x[0] !== "@" && x[0] !== "#"))}</button>` : ""}</div>
     ${di ? `<span class="chip dl ${di.state}" title="Hat\xE1rid\u0151: ${esc(t.hatarido.replace("T", " "))}">${ICON_CLOCK}${esc(di.label)}</span>` : ""}
     <span class="acts">${done ? "" : working ? `<button type="button" class="icon go-b on" data-act="pause" title="Sz\xFCneteltet\xE9s" aria-label="Sz\xFCneteltet\xE9s">${ICON_PAUSE}</button>` : `<button type="button" class="icon go-b" data-act="start" title="Munka ind\xEDt\xE1sa" aria-label="Munka ind\xEDt\xE1sa">${ICON_PLAY}</button>`}${histBtn(t.id)}<button type="button" class="icon" data-act="edit" title="Szerkeszt\xE9s" aria-label="Szerkeszt\xE9s">\u270E</button></span></li>`;
+  }
+  function spentChip(t, now, wm) {
+    const e = (wm || workTotals(st.sessions, now, capOf(live.gap))).get(t.id);
+    return e && e.ms >= 3e4 ? `<span class="chip tm" title="R\xE1ford\xEDtott id\u0151: ${fmtWork(e.ms)} (${e.n} munkamenet)">${fmtWork(e.ms)}</span>` : "";
   }
   var histBtn = (id) => `<button type="button" class="icon hist-b${ui.histOpen.has(id) ? " on" : ""}" data-act="hist" title="El\u0151zm\xE9nyek" aria-label="El\u0151zm\xE9nyek" aria-expanded="${ui.histOpen.has(id)}">${ICON_CLOCK}</button>`;
   function histRow(t) {
     const tl = timelineFor(t, st.hist.filter((e) => e.feladat === t.id));
     return `<li class="hist" data-for="${esc(t.id)}"><ol>${tl.map((x) => `<li${x.old ? ' class="old" title="A napl\xF3z\xE1s el\u0151tti id\u0151b\xE9lyegb\u0151l"' : ""}><time>${esc(fmtWhen(x.at))}</time><span>${esc(x.text)}</span></li>`).join("")}</ol></li>`;
   }
-  var taskRows = (t, terms, now) => st.editing === t.id ? editRow(t) : viewRow(t, terms, now) + (ui.histOpen.has(t.id) ? histRow(t) : "");
+  var taskRows = (t, terms, now, wm) => st.editing === t.id ? editRow(t) : viewRow(t, terms, now, wm) + (ui.histOpen.has(t.id) ? histRow(t) : "");
   function editRow(t) {
     return `<li class="task editing" data-id="${esc(t.id)}"><form class="edit" data-id="${esc(t.id)}">
     <textarea name="feladat" rows="2" aria-label="Feladat">${esc(t.feladat)}</textarea>
@@ -2436,6 +2452,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
     const forced = terms.length > 0 || ui.status !== "all" || ui.period !== "all";
     const editDay = st.editing ? (st.tasks.find((x) => x.id === st.editing) || {}).datum : null;
     const isOpen = (ds) => forced || ds === editDay || (ui.dayState.has(ds) ? ui.dayState.get(ds) : ds === today || cnt[ds] > (dn[ds] || 0));
+    const wm = workTotals(st.sessions, now, capOf(live.gap));
     let html = "", cur = null;
     for (const t of vis) {
       if (t.datum !== cur) {
@@ -2444,7 +2461,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
         const op = isOpen(cur), nOpen = cnt[cur] - (dn[cur] || 0);
         html += `<section class="day${cur === today ? " is-today" : ""}${op ? "" : " collapsed"}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? "\xD6sszecsuk\xE1s" : "Kinyit\xE1s"}"><span class="chev">\u25BE</span>${esc(dayLabel(cur))}</button><small>${dn[cur] || 0}/${cnt[cur]} k\xE9sz${!op && nOpen ? ` \xB7 <b>${nOpen} nyitott</b>` : ""}</small></h2><ul>`;
       }
-      html += taskRows(t, terms, now);
+      html += taskRows(t, terms, now, wm);
     }
     list.innerHTML = html + "</ul></section>";
   }

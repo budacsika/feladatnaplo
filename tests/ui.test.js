@@ -570,6 +570,13 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert(dash.wt >= 1, 'a heti diagram a napi mért időt mutatja');
   assert(dash.lists.includes('Mért idő · feladatok') && dash.lists.includes('Mért idő · megbízók'), 'feladatonkénti és megbízónkénti mért idő');
   await (await page.$('#dash')).screenshot({ path: path.resolve(OUT, 'shot-stats.png') });
+
+  // 15b) kész feladaton a ráfordított idő (ha van adat)
+  const tm = id => page.evaluate(i => { const e = document.querySelector(`#list [data-id="${i}"] .chip.tm`); return e ? e.textContent : null; }, id);
+  assert(/^\d+( ó \d\d)? p$|^\d+ p$|^\d+ ó \d\d p$/.test(await tm(idA) || ''), 'a kész, mért feladaton látszik a ráfordított idő: ' + await tm(idA));
+  assert.strictEqual(await tm(idB), null, 'fél percnél rövidebb mért idő nem jelenik meg');
+  assert.strictEqual(await page.evaluate(() => document.querySelectorAll('#list .task:not(.done) .chip.tm').length), 0, 'nyitott feladaton nincs ilyen jelzés');
+  await (await page.$(`#list [data-id="${idA}"]`)).screenshot({ path: path.resolve(OUT, 'shot-spent.png') });
   for (const [w, name] of [[900, 'shot-stats-900.png'], [390, 'shot-stats-390.png']]) {          // közepes és telefonos szélesség: nincs vízszintes görgetés, a KPI-értékek nem törnek
     await page.setViewport({ width: w, height: 1000 }); await sleep(250);
     assert.strictEqual(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, `${w}px: nincs vízszintes görgetés`);

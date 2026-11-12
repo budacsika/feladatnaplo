@@ -3,7 +3,7 @@ process.env.TZ = 'Europe/Budapest';
 import assert from 'node:assert';
 import { workStats, periodStats } from '../src/stats.js';
 import { startWork, pauseWork, stopForTask, closeSession, activeOf, isActive, durMs, workMsOfTask, workMsOn, spanOf, normalizeActive,
-         gapCheck, capOf, sessionsToCSV, parseSessions, mergeSessions, fmtHMS, fmtWork, SESS_HEADER, SLEEP_MS } from '../src/worktime.js';
+         gapCheck, capOf, workTotals, sessionsToCSV, parseSessions, mergeSessions, fmtHMS, fmtWork, SESS_HEADER, SLEEP_MS } from '../src/worktime.js';
 
 assert.strictEqual(new Date(2026, 9, 25, 3, 30).getTimezoneOffset(), -60, 'a teszt Europe/Budapest zónában fut');
 const T = s => new Date(s).getTime();                    // helyi idő, zóna nélküli bélyegből
@@ -203,5 +203,12 @@ assert.strictEqual(normalizeActive([mk('1', 'a', '2026-11-09T09:00:00')]), 0);
   assert.strictEqual(workStats([], tasks, days, 0).avgTaskMs, null); assert.strictEqual(workStats([], tasks, days, 0).totalMs, 0);
   // a Tárolóban lévő feladat nem számít a feladat-statisztikába (periodStats), de az ideje igen (workStats) – lásd fent
   assert.strictEqual(ps.total, 4, 'a tárolt feladat nincs a napi feladat-statisztikában');
+}
+{
+  const W = [mk('1', 'a', '2026-11-09T09:00:00'), mk('2', 'a', '2026-11-09T10:00:00'), mk('3', 'b', '2026-11-09T11:00:00')];
+  closeSession(W[0], T('2026-11-09T09:30:00'), 'szunet'); closeSession(W[1], T('2026-11-09T10:15:00'), 'szunet');
+  const wt = workTotals(W, T('2026-11-09T11:20:00'));
+  assert.deepStrictEqual([wt.get('a').ms / MIN, wt.get('a').n, wt.get('b').ms / MIN, wt.get('b').n], [45, 2, 20, 1], 'feladatonkénti összeg: lezárt + futó');
+  assert.strictEqual(wt.get('c'), undefined);
 }
 console.log('Munkamenet pure tesztek ✔');
