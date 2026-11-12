@@ -432,8 +432,7 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert.strictEqual(await page.$$eval('#list .task.working', e => e.length), 1, 'az aktív sor kiemelve');
   assert.strictEqual(await page.$eval(`#list [data-id="${idA}"] .go-b`, e => e.dataset.act), 'pause', 'az aktív soron szünet gomb');
   assert.strictEqual(await page.$eval(`#list [data-id="${idA}"] .dl, #list [data-id="${idA}"] .chip.dl`, e => !!e), true, 'a határidő a helyén marad');
-  await sleep(1300);
-  assert(await page.$eval('#ldSess', e => e.textContent !== '00:00:00'), 'a számláló halad (a kezdetből számolva)');
+  await page.waitForFunction(() => document.querySelector('#ldSess').textContent !== '00:00:00', { timeout: 4000 });   // a számláló halad (a kezdetből számolva)
   await sleep(500);
   let sc = await sessCsv();
   assert(new RegExp(idA + ';\\d{4}-\\d\\d-\\d\\dT[\\d:]+;;;\\r?\\n').test(sc), 'a futó munkamenet tartósan mentve (üres veg): ' + sc);
@@ -551,6 +550,16 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   ls = await lsSess();
   const k = ls.trim().split(/\r?\n/).slice(1).map(r => r.split(';')).filter(r => r[5] === 'kesz').pop();
   assert(k && Number(k[4]) < 60, 'befejezés a kérdés mellett: a kihagyott óra nem számít: ' + JSON.stringify(k));
+
+  // 15) Statisztika: mért idő a heti/havi panelen, az „átfutási idő" külön megnevezve
+  const dash = await page.evaluate(() => ({ cap: [...document.querySelectorAll('#dash .kpi .cap')].map(e => e.textContent), val: [...document.querySelectorAll('#dash .kpi')].map(e => e.querySelector('.kv').textContent),
+                                            wt: document.querySelectorAll('#dash .chart text.wt').length, lists: [...document.querySelectorAll('#dash .tops .cap')].map(e => e.textContent) }));
+  assert(dash.cap.includes('átfutási idő') && !dash.cap.includes('átfutás'), 'az átfutási idő pontosan van elnevezve: ' + dash.cap);
+  assert(dash.cap.filter(c => c === 'mért idő').length === 2 && dash.cap.filter(c => c === 'átl. ráfordítás').length === 2, 'hét és hónap: mért idő és ráfordítás');
+  assert(dash.val[dash.cap.indexOf('mért idő')] !== '0 p', 'a mért idő megjelenik a héten: ' + dash.val);
+  assert(dash.wt >= 1, 'a heti diagram a napi mért időt mutatja');
+  assert(dash.lists.includes('Mért idő · feladatok') && dash.lists.includes('Mért idő · megbízók'), 'feladatonkénti és megbízónkénti mért idő');
+  await (await page.$('#dash')).screenshot({ path: path.resolve(OUT, 'shot-stats.png') });
 
   assert.deepStrictEqual(errors, [], 'nincs JS hiba: ' + errors.join(' | '));
   console.log('UI teszt rendben ✔');

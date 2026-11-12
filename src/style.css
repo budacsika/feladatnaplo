@@ -396,3 +396,12 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   .dl.over{font-weight:700;border-color:#000!important}
   mark{background:none;color:inherit;text-decoration:underline}
 }
+
+/* mért idő a statisztikában */
+.tr.nl{cursor:default} .tr.nl:hover{background:none}
+.tr b.tm{width:auto;min-width:44px;white-space:nowrap;color:var(--cyan)}
+.tops .wtaskL .tb i,.tops .whoL .tb i{background:linear-gradient(90deg,#b98200,var(--gold))}
+.tops .wtaskL .tb i{background:linear-gradient(90deg,var(--cyan2),var(--cyan))}
+.ov-k .kpis{grid-template-columns:1fr 1fr}
+.ov-k .kpi .ks{font-size:9.5px}
+.tr.tmr{grid-template-columns:minmax(0,1fr) 40px auto}

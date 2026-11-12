@@ -1,6 +1,7 @@
 // A munkamenet-modell (src/worktime.js) tesztje Node-ban, rögzített időzónában és vezérelt órával
 process.env.TZ = 'Europe/Budapest';
 import assert from 'node:assert';
+import { workStats, periodStats } from '../src/stats.js';
 import { startWork, pauseWork, stopForTask, closeSession, activeOf, isActive, durMs, workMsOfTask, workMsOn, spanOf, normalizeActive,
          gapCheck, capOf, sessionsToCSV, parseSessions, mergeSessions, fmtHMS, fmtWork, SESS_HEADER, SLEEP_MS } from '../src/worktime.js';
 
@@ -162,4 +163,45 @@ assert.strictEqual(fmtHMS(23 * 60e3 + 41e3), '00:23:41'); assert.strictEqual(fmt
 assert.strictEqual(fmtWork(35 * MIN), '35 p'); assert.strictEqual(fmtWork(125 * MIN), '2 ó 05 p'); assert.strictEqual(fmtWork(0), '0 p');
 assert.strictEqual(spanOf({ kezdet: 'rossz', veg: '' }, 1), null);
 assert.strictEqual(normalizeActive([mk('1', 'a', '2026-11-09T09:00:00')]), 0);
+
+// statisztika: napokra vágott, feladatonkénti és megbízónkénti mért idő; az átlag csak a kész, mért feladatokra; nem keveredik az átfutási idővel
+{
+  const mkS = (id, tid, a, b) => ({ id, feladat_id: tid, kezdet: a, veg: b, idotartam_mp: String((T(b) - T(a)) / 1000), ok: 'szunet' });
+  const task = (id, f, o) => ({ id, feladat: f, datum: '2026-11-09', letrehozva: '2026-11-09T08:00:00', megbizo: '', statusz: 'nyitott', lezarva: '', hatarido: '', ...o });
+  const tasks = [
+    task('a', 'Riport', { megbizo: 'Kiss Anna', statusz: 'kesz', lezarva: '2026-11-10T09:00:00' }),
+    task('b', 'KSH adat', { megbizo: 'kiss  anna' }),
+    task('c', 'Tárolt feladat', { megbizo: 'Nagy Béla', tarolo: 'igen' }),
+    task('d', 'Kész, de nem mért', { statusz: 'kesz', lezarva: '2026-11-10T10:00:00' }),
+    task('e', 'Kész másik héten', { statusz: 'kesz', lezarva: '2026-12-01T10:00:00' }),
+  ];
+  const S = [
+    mkS('1', 'a', '2026-11-09T09:00:00', '2026-11-09T10:00:00'),            // 60 p, hétfő
+    mkS('2', 'a', '2026-11-09T23:30:00', '2026-11-10T00:30:00'),            // 30 p hétfő + 30 p kedd (éjfélen átnyúlik)
+    mkS('3', 'b', '2026-11-10T10:00:00', '2026-11-10T10:20:00'),            // 20 p
+    mkS('4', 'c', '2026-11-10T11:00:00', '2026-11-10T11:10:00'),            // 10 p – tárolt feladat, de a mért idő számít
+    mkS('5', 'törölt', '2026-11-11T08:00:00', '2026-11-11T08:05:00'),       // 5 p – törölt feladat
+    mkS('6', 'e', '2026-12-01T09:00:00', '2026-12-01T12:00:00'),            // másik időszak
+  ];
+  const days = ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15'];
+  const w = workStats(S, tasks, days, T('2026-11-15T20:00:00'));
+  assert.strictEqual(w.totalMs, (60 + 60 + 20 + 10 + 5) * MIN, 'összes mért idő (a másik időszak nélkül)');
+  assert.strictEqual(w.per['2026-11-09'], 90 * MIN); assert.strictEqual(w.per['2026-11-10'], (30 + 20 + 10) * MIN); assert.strictEqual(w.per['2026-11-11'], 5 * MIN);
+  assert.strictEqual(w.per['2026-11-12'], 0);
+  assert.deepStrictEqual(w.tasks.map(x => [x.id, x.ms / MIN]), [['a', 120], ['b', 20], ['c', 10], ['törölt', 5]], 'feladatonként, csökkenő sorrend');
+  assert.strictEqual(w.tasks[3].name, '(törölt feladat)');
+  assert.deepStrictEqual(w.who.map(x => [x.name, x.ms / MIN]), [['Kiss Anna', 140], ['Nagy Béla', 10], ['(nincs megbízó)', 5]], 'megbízónként (kisbetű/szóköz-független)');
+  assert.strictEqual(w.avgN, 1); assert.strictEqual(w.avgTaskMs, 120 * MIN, 'átlag: csak a kész és mért feladat (a nem mért kész és a más időszaki kimarad)');
+  // az átfutási idő külön fogalom: a feladat 25 órája volt nyitva, de csak 120 percet dolgoztak rajta
+  const ps = periodStats(tasks, days, T('2026-11-15T20:00:00'));
+  assert.strictEqual(ps.leadMs, (25 + 26 + 530) / 3 * 60 * MIN, 'átfutási idő: létrehozástól lezárásig, a feladat napja szerint (periodStats)');
+  assert.notStrictEqual(Math.round(ps.leadMs), w.avgTaskMs, 'az átfutási idő és a munkaidő nem keveredik');
+  // futó munkamenet az időszak végén; a függő ellenőrzés (cap) csak az ismert időt számolja
+  const run = [{ id: 'r', feladat_id: 'b', kezdet: '2026-11-12T09:00:00', veg: '', idotartam_mp: '', ok: '' }];
+  assert.strictEqual(workStats(run, tasks, days, T('2026-11-12T09:45:00')).totalMs, 45 * MIN);
+  assert.strictEqual(workStats(run, tasks, days, T('2026-11-12T12:00:00'), T('2026-11-12T09:30:00')).totalMs, 30 * MIN);
+  assert.strictEqual(workStats([], tasks, days, 0).avgTaskMs, null); assert.strictEqual(workStats([], tasks, days, 0).totalMs, 0);
+  // a Tárolóban lévő feladat nem számít a feladat-statisztikába (periodStats), de az ideje igen (workStats) – lásd fent
+  assert.strictEqual(ps.total, 4, 'a tárolt feladat nincs a napi feladat-statisztikában');
+}
 console.log('Munkamenet pure tesztek ✔');
