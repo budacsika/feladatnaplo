@@ -1,12 +1,18 @@
 {
   "name": "feladatnaplo",
-  "version": "2.6.1",
+  "version": "2.7.0",
   "private": true,
   "description": "Egyfájlos, böngészőben futó feladatnapló (CSV-tárolás a File System Access API-val)",
   "scripts": {
-    "test": "node tests/pure.test.js && node tests/ui.test.js",
+    "build": "node build.mjs",
+    "dev": "node build.mjs --watch",
+    "test": "npm run build && npm run test:pure && npm run test:ui",
     "test:pure": "node tests/pure.test.js",
     "test:ui": "node tests/ui.test.js"
   },
-  "devDependencies": { "puppeteer-core": "^25.16.0" }
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "puppeteer-core": "^25.16.0"
+  },
+  "type": "module"
 }

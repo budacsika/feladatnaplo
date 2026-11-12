@@ -1,13 +1,11 @@
-// A HTML PURE:START..PURE:END blokkjának tesztje Node-ban (v2)
-const fs = require('fs');
-const assert = require('assert');
-const html = fs.readFileSync(process.argv[2] || require('path').resolve(__dirname, '../feladatnaplo.html'), 'utf8');
-const m = html.match(/\/\* ==== PURE:START[^*]*\*\/([\s\S]*?)\/\* ==== PURE:END ==== \*\//);
-assert(m, 'PURE blokk nem található');
-const api = new Function(m[1] + `; return {HEADER,normDate,normStamp,normDeadline,detectDelimiter,parseCSV,rowsToTasks,toCSV,fold,mergeInto,
-  todayStr,extractTags,cimkeToTags,dueInfo,weekDays,monthDays,isoWeek,periodStats,fmtLeft,fmtAgo,fmtDur,toMs,dstr,cmpTasks,pkey,normName,parsePeople,peopleToCSV,seedPeople,reconcilePeople,mergePeopleInto,lev,suggestPeople,exactPerson,peopleStats,isParked,cmpParked};`)();
-const { normDate, normStamp, normDeadline, detectDelimiter, parseCSV, rowsToTasks, toCSV, fold, mergeInto, extractTags, cimkeToTags,
-        dueInfo, weekDays, monthDays, isoWeek, periodStats, fmtLeft, fmtAgo, fmtDur, toMs, dstr, HEADER, cmpTasks, pkey, normName, parsePeople, peopleToCSV, seedPeople, reconcilePeople, mergePeopleInto, lev, suggestPeople, exactPerson, peopleStats, isParked, cmpParked } = api;
+// A DOM-mentes modulok (src/util, tasks, csv, people-model, stats) tesztje Node-ban
+import assert from 'node:assert';
+import { normDate, normStamp, normDeadline, fold, weekDays, monthDays, isoWeek, fmtLeft, fmtAgo, fmtDur, toMs, dstr } from '../src/util.js';
+import { mergeInto, extractTags, cimkeToTags, dueInfo, HEADER, cmpTasks, isParked, cmpParked } from '../src/tasks.js';
+import { detectDelimiter, parseCSV, rowsToTasks, toCSV } from '../src/csv.js';
+import { pkey, normName, parsePeople, peopleToCSV, seedPeople, reconcilePeople, mergePeopleInto, lev, suggestPeople, exactPerson } from '../src/people-model.js';
+import { periodStats, peopleStats } from '../src/stats.js';
+
 const parse = raw => { const d = detectDelimiter(raw); return rowsToTasks(parseCSV(raw, d), d); };
 
 // 1) A felhasználó által beillesztett (Excelből másolt, TAB-os) régi v1 tábla → migráció

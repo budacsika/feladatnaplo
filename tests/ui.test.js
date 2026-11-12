@@ -1,9 +1,12 @@
 // Headless Chrome + memóriabeli File System Access mock (v2)
-const puppeteer = require('puppeteer-core');
-const assert = require('assert');
-const path = require('path');
+import puppeteer from 'puppeteer-core';
+import assert from 'node:assert';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HTML = 'file://' + path.resolve(__dirname, '../feladatnaplo.html');
-const OUT = path.resolve(__dirname, 'out'); require('fs').mkdirSync(OUT, { recursive: true });
+const OUT = path.resolve(__dirname, 'out'); fs.mkdirSync(OUT, { recursive: true });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 const MOCK = () => {
@@ -47,7 +50,7 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
 `;
 
 (async () => {
-  const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || ['/usr/bin/google-chrome','/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].find(p => require('fs').existsSync(p)), args: ['--no-sandbox'], headless: 'new' });
+  const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH || ['/usr/bin/google-chrome','/Applications/Google Chrome.app/Contents/MacOS/Google Chrome','C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'].find(p => fs.existsSync(p)), args: ['--no-sandbox'], headless: 'new' });
   const page = await browser.newPage();
   await page.setViewport({ width: 1280, height: 1000 });
   const errors = [];

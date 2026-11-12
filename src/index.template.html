@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feladatnapló</title>
+@@STYLE@@
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gRing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8ef6ff"/><stop offset="1" stop-color="#009fd6"/></linearGradient>
+  <linearGradient id="gBarDone" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#62ecff"/><stop offset="1" stop-color="#0a86b4"/></linearGradient>
+  <linearGradient id="gBarOpen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd868"/><stop offset="1" stop-color="#b98200"/></linearGradient>
+  <filter id="fGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs></svg>
+
+<div class="wrap">
+  <div class="print-head"><h1>FELADATNAPLÓ</h1><div class="pm" id="printMeta"></div></div>
+
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#35e0ff" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="24" cy="24" r="15" fill="none" stroke="#35e0ff" stroke-width="2"/><circle cx="24" cy="24" r="8" fill="rgba(53,224,255,.25)" stroke="#8ef6ff" stroke-width="1.5"/><path d="M24 3v8M24 37v8M3 24h8M37 24h8" stroke="#ffc233" stroke-width="2"/></svg>
+      <div><h1>FELADATNAPLÓ</h1><div class="cap">műveleti napló · v<span id="ver"></span></div></div>
+    </div>
+    <div class="hud-clock"><div class="clock mono" id="clock">--:--:--</div><div class="cap" id="dateLine"></div></div>
+    <div class="hud-right"><span id="alertBadge"></span><button id="pill" class="pill warn" type="button"><i></i><span>Indítás…</span></button></div>
+  </header>
+
+  <form id="addForm" class="panel cmd" autocomplete="off">
+    <span class="cmd-tab"><i></i><span id="cmdTabTxt">Új feladat</span></span>
+    <div class="cmd-row">
+      <span class="prompt mono">&gt;_</span>
+      <input type="text" id="fText" placeholder="Új feladat…  (a szövegben használhatsz #címkét)" aria-label="Feladat" required>
+      <button class="primary" type="submit">Rögzít</button>
+    </div>
+    <div class="cmd-row2">
+      <div>
+        <div class="fl"><label class="cap" for="fWho">Megbízó (kitől jött)</label><label class="keep cap"><input type="checkbox" id="fKeep">megtart</label></div>
+        <input type="text" id="fWho" class="who-input" autocomplete="off" placeholder="kezdd el gépelni a nevét…">
+      </div>
+      <div>
+        <div class="fl"><label class="cap" for="fDue">Határidő</label></div>
+        <div class="dueline">
+          <input type="datetime-local" id="fDue">
+          <button type="button" class="mini" data-due="+2h" title="2 óra múlva">+2 ó</button>
+          <button type="button" class="mini" data-due="today17" title="Ma 17:00">Ma 17:00</button>
+          <button type="button" class="mini" data-due="tom9" title="Holnap 9:00">Holnap 9:00</button>
+          <button type="button" class="mini" data-due="clear" title="Határidő törlése">×</button>
+        </div>
+      </div>
+      <div>
+        <div class="fl"><label class="cap" for="fDate">Dátum</label><label class="keep cap park-k" title="Nem ütemezett feladat: nincs dátuma és határideje, nem számít a statisztikába"><input type="checkbox" id="fPark">tárolóba</label></div>
+        <input type="date" id="fDate" required>
+      </div>
+    </div>
+    <div class="chips" id="quickTags"></div>
+  </form>
+
+  <section id="today" class="panel today" aria-label="Napi státusz"></section>
+
+  <div class="filters">
+    <input type="search" id="q" placeholder="Keresés…  (#címke, @megbízó is megy)" aria-label="Keresés">
+    <div class="seg" id="segStatus" role="group" aria-label="Állapot">
+      <button type="button" data-s="all" aria-pressed="true">Mind</button>
+      <button type="button" data-s="nyitott" aria-pressed="false">Nyitott</button>
+      <button type="button" data-s="kesz" aria-pressed="false">Kész</button>
+    </div>
+    <select id="period" aria-label="Időszak">
+      <option value="all">Minden időszak</option>
+      <option value="today">Ma</option>
+      <option value="7">Utolsó 7 nap</option>
+      <option value="30">Utolsó 30 nap</option>
+    </select>
+    <button type="button" class="ghost park-b" id="btnPark" title="Nem ütemezett feladatok">Tároló (0)</button>
+    <button type="button" class="ghost" id="btnPrint" title="Az aktuális szűrés nyomtatása vagy mentése PDF-ként">Nyomtatás / PDF</button>
+  </div>
+  <div class="meta"><span id="meta"></span><span class="meta-act"><button type="button" class="mini" id="daysAll" title="Minden nap kinyitása">mind kinyit</button><button type="button" class="mini" id="daysToday" title="Csak a mai nap maradjon nyitva">csak ma</button></span></div>
+
+  <main id="list"></main>
+
+  <section id="park" class="panel park" aria-label="Tároló">
+    <div class="ph"><span class="cap"><i class="pkd-dot"></i>Tároló · nem ütemezett</span><span class="rng mono" id="parkCount"></span><span class="note">nem számít bele a statisztikába</span><button type="button" class="mini" id="parkToggle">összecsukás</button></div>
+    <div id="parkBody"></div>
+  </section>
+
+  <section id="overview" class="overview">
+  <div class="dash-bar"><span class="cap">Áttekintés</span><span class="line"></span><button type="button" class="mini" id="pplToggle">megbízók</button><button type="button" class="mini" id="dashToggle">elrejtés</button></div>
+  <section id="dash" class="dash"></section>
+  <section id="people" class="panel people" hidden>
+    <div class="ph"><span class="cap">Megbízók · kitől hány feladat jött</span>
+      <span class="seg pseg" id="pplPeriod"><button type="button" data-p="w">Hét</button><button type="button" data-p="m">Hónap</button><button type="button" data-p="all" aria-pressed="true">Összes</button></span>
+      <span class="rng mono" id="pplRange"></span>
+      <form id="pplAdd" class="ppl-add" autocomplete="off"><input type="text" id="pplNew" placeholder="Új megbízó neve" aria-label="Új megbízó"><button type="submit" class="mini">+ Hozzáad</button></form></div>
+    <div class="pbody" id="pplBody"></div>
+  </section>
+  </section>
+
+  <footer class="foot">
+    <button type="button" class="ghost" id="btnFolder">Mappa kiválasztása / váltása</button>
+    <button type="button" class="ghost" id="btnExport">CSV exportálás</button>
+    <button type="button" class="ghost" id="btnImport">CSV importálás</button>
+    <p class="hint">Mentés: a kiválasztott mappa <b>feladatnaplo.csv</b> fájlja, minden változtatás után. Megbízók listája: <b>megbizok.csv</b>. Napi biztonsági másolat: <b>mentesek</b> almappa. Semmi nem hagyja el a gépet. Billentyűk: <b>n</b> új feladat, <b>/</b> keresés.</p>
+  </footer>
+</div>
+<div id="ac" class="ac" hidden></div>
+<div id="toast" role="status"></div>
+<input type="file" id="importFile" accept=".csv,text/csv,text/plain" hidden>
+
+@@SCRIPT@@
+</body>
+</html>
+

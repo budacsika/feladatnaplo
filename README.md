@@ -78,11 +78,28 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 
 ## Fejlesztés és tesztek
 
-A program egyetlen fájl (`feladatnaplo.html`), build nélkül. A DOM-mentes logika (CSV, normalizálás, határidők, statisztika, megbízók) a `PURE:START … PURE:END` blokkban van, ezt a Node-tesztek közvetlenül kiolvassák.
+A forrás moduláris (`src/`), a kiadás viszont továbbra is **egyetlen, önállóan megnyitható fájl**: a `feladatnaplo.html` a `src/` tartalmából épül (esbuild), és a repóban is benne van, így használathoz semmit nem kell építeni, elég letölteni. (Böngészőben `file://`-ról a külön modulfájlok nem töltődnek be, ezért kell az egyfájlos build.)
+
+```
+src/
+  index.template.html   oldalváz (a stílus és a script ide kerül be)
+  style.css             a teljes stílus
+  app.js                belépési pont (indítás, óra)
+  events.js             eseménykötések
+  state.js              közös állapot: st (adatok), ui (szűrők), ov (nézetek)
+  util.js tasks.js csv.js people-model.js stats.js     DOM-mentes logika (ezt tesztelik a Node-tesztek)
+  filter.js list.js park.js dash.js render.js status.js people.js autocomplete.js     megjelenítés
+  storage.js            mentés/betöltés: mappa, IndexedDB, mentések, külső változás
+  actions.js clock.js   feladatműveletek, óra
+```
+
+A DOM-mentes modulok (`util`, `tasks`, `csv`, `people-model`, `stats`) nem importálnak a `state.js`-ből, ezért Node-ban közvetlenül tesztelhetők. A verziószámot a `package.json` adja, a build beleteszi a felületbe.
 
 ```
 npm install
-npm test          # mindkét teszt
+npm run build     # src/ → feladatnaplo.html
+npm run dev       # build + újraépítés mentéskor
+npm test          # build + mindkét teszt
 npm run test:pure # csak a logika
 npm run test:ui   # csak a böngészős teszt
 ```
@@ -99,6 +116,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 |---|---|
 | 2.6 | Összecsukható napok (alapból csak a mai nyitott) |
 | 2.6.1 | Szigorúbb dátum- és időellenőrzés (feb. 31., szökőév, óra/perc tartomány) |
+| 2.7.0 | Moduláris forrás (`src/`), egyfájlos build (esbuild); a működés változatlan |
 | 2.5 | Tároló: nem ütemezett feladatok, `tarolo` oszlop |
 | 2.4 | Heti és havi áttekintés újratervezve, többsoros határidő-lista |
 | 2.3 | Napi státusz lapos sávban felül, heti/havi/megbízói blokk alul, kiemelt felviteli űrlap |
