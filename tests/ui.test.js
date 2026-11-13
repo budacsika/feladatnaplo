@@ -446,6 +446,9 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   await sleep(500);
   let sc = await sessCsv();
   assert(new RegExp(idA + ';\\d{4}-\\d\\d-\\d\\dT[\\d:]+;;;\\r?\\n').test(sc), 'a futó munkamenet tartósan mentve (üres veg): ' + sc);
+  const ctr = sel => page.$eval(sel, e => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; });
+  const cs = [await ctr('#today .ld .chip.dl'), await ctr('#today .ld-sum'), await ctr('#ldSess'), await ctr('#today .ld-name')];
+  assert(Math.max(...cs) - Math.min(...cs) < 3, 'az élő sáv elemei függőlegesen egy vonalban vannak: ' + cs.map(x => x.toFixed(1)));
   await (await page.$('#today')).screenshot({ path: path.resolve(OUT, 'shot-livedesk.png') });
   // váltás: megerősítés nélkül, a régi lezárul (valtas), az új indul
   await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idB);

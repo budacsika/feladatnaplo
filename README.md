@@ -140,6 +140,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.9.4 | Az élő munka sávjában a határidő- és megbízó-chip függőlegesen középre igazítva |
 | 2.9.3 | Kész feladatokon látszik a ráfordított (mért) idő, ha van adat |
 | 2.9.2 | Alapból nyitva marad minden nap, amelyben van megoldatlan feladat; „Ma 16:30” gyorsgomb; kompakt heti/havi áttekintő (egysoros mutatósáv, 2×2 toplista) |
 | 2.9.1 | Következő feladatok sáv: a határidő-címke a szöveg fölött, hosszú szöveg két sorra vágva (teljes szöveg a súgóban) |

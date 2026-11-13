@@ -414,3 +414,5 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .tr.tmr{grid-template-columns:minmax(0,1fr) 40px auto}
 .chip.tm{margin-left:8px;color:var(--cyan);border-color:rgba(53,224,255,.3);background:rgba(53,224,255,.05);font-family:var(--mono);opacity:.85}
 .task.done .chip.tm{opacity:.8}
+/* az élő sávban a chipek középre igazodnak (a listabeli .dl align-self:start és a .who margó itt nem érvényes) */
+.ld .chip,.ld .chip.who,.ld .chip.dl{align-self:center;justify-self:auto;margin:0}
