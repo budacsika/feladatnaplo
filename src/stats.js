@@ -1,8 +1,8 @@
 // Időszaki és megbízónkénti statisztikák (DOM-mentes)
 import { normName, pkey } from './people-model.js';
 import { dueInfo, extractTags, isParked } from './tasks.js';
-import { fold, toMs } from './util.js';
-import { dayBounds, spanOf, workMsOfTask } from './worktime.js';
+import { WDN, fold, toMs } from './util.js';
+import { dayBounds, fmtLead, fmtWork, isActive, spanOf, workMsOfTask } from './worktime.js';
 
 export function periodStats(tasks, days, now = Date.now()){
   const set = new Set(days), per = {}; days.forEach(d => per[d] = { total:0, done:0, open:0 });
@@ -63,4 +63,72 @@ export function workStats(sessions, tasks, days, now = Date.now(), cap = Infinit
   }
   const sorted = m => [...m.values()].sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name, 'hu'));
   return { totalMs, per, tasks: sorted(task), who: sorted(who), avgTaskMs: n ? sum / n : null, avgN: n };
+}
+
+/**
+ * Munkaidő-térkép modellje (DOM-mentes): egy időszak (days) munkamenetei napokra és feladatokra bontva.
+ *   days[{day,a,b,w,share,rows[{id,name,ms,segs[{id,a,b,s0,s1,run,ok}],created,done[],reopen[]}]}] – csak a mért napok
+ *   tiles: összes mért idő, munkamenetek száma, átlagos és leghosszabb munkamenet, feladatok / kész, átlagos ráfordítás
+ *   lead[{id,name,lead,work,done,reopened,created,end}]: átfutási idő (létrehozás → utolsó lezárás vagy most) és a teljes mért
+ *     ráfordítás egymás mellett – két külön mennyiség, a diagramon sem keverjük
+ *   findings: mondatok részekre bontva (szöveg vagy { b } félkövér)
+ * A mért idő ugyanaz, mint a workStats-ban (napokra vágva); a futó munkamenet a `now`-ig (cap-ig) tart.
+ */
+export function timeMapModel(sessions, tasks, hist, days, now = Date.now(), cap = Infinity){
+  const byId = new Map(tasks.map(t => [t.id, t])), ww = workStats(sessions, tasks, days, now, cap);
+  const nameOf = id => { const t = byId.get(id); return t ? t.feladat : '(törölt feladat)'; };
+  const doneEv = new Map(), reopenEv = new Map(), push = (m, k, v) => { const a = m.get(k) || []; a.push(v); m.set(k, a); };
+  for (const e of hist || []) {
+    if (e.mezo !== 'statusz') continue;
+    const t = toMs(e.idopont); if (isNaN(t)) continue;
+    if (e.uj === 'kesz') push(doneEv, e.feladat, t); else if (e.regi === 'kesz') push(reopenEv, e.feladat, t);
+  }
+  const inDay = (t, lo, hi) => t >= lo && t < hi, per = new Map(), dayList = [];   // per: munkamenet-azonosító → az időszakra eső ms (az éjfélen átnyúló egy munkamenet marad)
+  for (const d of days) {
+    const [lo, hi] = dayBounds(d), rows = new Map(); let w = 0, a = Infinity, b = -Infinity;
+    for (const s of sessions) {
+      const x = spanOf(s, now, cap); if (!x) continue;
+      const sa = Math.max(lo, x[0]), sb = Math.min(hi, x[1]); if (sb <= sa) continue;
+      const seg = { id: s.id, a: sa, b: sb, s0: x[0], s1: x[1], run: isActive(s), ok: s.ok || '' };
+      const r = rows.get(s.feladat_id) || { id: s.feladat_id, name: nameOf(s.feladat_id), ms: 0, segs: [], first: sa }; r.segs.push(seg); r.ms += sb - sa; rows.set(s.feladat_id, r);
+      w += sb - sa; a = Math.min(a, sa); b = Math.max(b, sb); per.set(s.id, (per.get(s.id) || 0) + sb - sa);
+    }
+    if (!rows.size) continue;
+    const list = [...rows.values()].sort((p, q) => p.first - q.first);
+    for (const r of list) {
+      const t = byId.get(r.id), c = t ? toMs(t.letrehozva) : NaN, dn = (doneEv.get(r.id) || []).filter(v => inDay(v, lo, hi)), ro = (reopenEv.get(r.id) || []).filter(v => inDay(v, lo, hi));
+      r.created = !isNaN(c) && inDay(c, lo, hi) ? c : null;
+      if (!dn.length && t && t.statusz === 'kesz' && !(doneEv.get(r.id) || []).length) { const z = toMs(t.lezarva); if (!isNaN(z) && inDay(z, lo, hi)) dn.push(z); }   // a naplózás előtt lezárt feladat: a lezarva mezőből
+      r.done = dn; r.reopen = ro;
+    }
+    dayList.push({ day: d, a, b, w, share: b > a ? w / (b - a) : 1, rows: list });
+  }
+  const lead = [];
+  for (const wt of ww.tasks) {
+    const t = byId.get(wt.id); if (!t) continue;
+    const c = toMs(t.letrehozva), done = t.statusz === 'kesz', end = done ? toMs(t.lezarva) : now;
+    if (isNaN(c) || isNaN(end) || end <= c) continue;
+    lead.push({ id: t.id, name: t.feladat, lead: end - c, work: workMsOfTask(sessions, t.id, now, cap), done, reopened: reopenEv.has(t.id), created: c, end });
+  }
+  lead.sort((p, q) => q.lead - p.lead);
+  const doneN = ww.tasks.filter(x => { const t = byId.get(x.id); return t && t.statusz === 'kesz'; }).length;
+  const lens = [...per.values()], tiles = { totalMs: ww.totalMs, n: lens.length, avgMs: lens.length ? ww.totalMs / lens.length : 0, longestMs: lens.reduce((m, v) => Math.max(m, v), 0),
+    days: dayList.length, tasks: ww.tasks.length, done: doneN, avgTaskMs: ww.avgTaskMs, avgN: ww.avgN };
+
+  const findings = [];
+  if (lens.length) {
+    const big = lens.filter(v => v >= 45 * 60e3), bigMs = big.reduce((x, v) => x + v, 0), short = lens.filter(v => v < 10 * 60e3).length;
+    findings.push(big.length
+      ? ['A mért idő ', { b: Math.round(bigMs / ww.totalMs * 100) + '%-a' }, ` ${big.length} darab, legalább 45 perces blokkból áll; a ${lens.length} munkamenetből ${short} rövidebb 10 percnél.`]
+      : [`Egyik munkamenet sem érte el a 45 percet; a ${lens.length} munkamenetből `, { b: String(short) }, ' rövidebb 10 percnél.']);
+  }
+  if (lead.length) {
+    const w = lead[0], pct = w.work / w.lead * 100;
+    findings.push(['A leghosszabb átfutású feladat (' + w.name + ') ', { b: fmtLead(w.lead) }, ' alatt ' + (w.done ? 'zárult le' : 'telt el eddig') + ', ebből ', { b: `${fmtWork(w.work)} (${pct < 1 ? '<1' : Math.round(pct)}%)` }, ' volt mért munka' + (w.reopened ? ' – közben lezárták, majd újranyitották.' : '.')]);
+  }
+  if (dayList.length) {
+    const dn = d => WDN[new Date(d.day + 'T12:00:00').getDay()];
+    findings.push(['Az első indítás és az utolsó leállítás közötti idő ', { b: dayList.map(d => `${dn(d)} ${Math.round(d.share * 100)}%`).join(', ') }, ' volt mérve' + (dayList.some(d => d.rows.some(r => r.segs.some(g => g.run))) ? ' (a mai nap még fut)' : '') + '. A különbség részben mérés nélküli munka (megbeszélés, szünet), mert az időmérés nem kötelező.']);
+  }
+  return { days: dayList, tiles, lead, findings };
 }

@@ -1,9 +1,9 @@
 // A munkamenet-modell (src/worktime.js) tesztje Node-ban, rögzített időzónában és vezérelt órával
 process.env.TZ = 'Europe/Budapest';
 import assert from 'node:assert';
-import { workStats, periodStats } from '../src/stats.js';
+import { workStats, periodStats, timeMapModel } from '../src/stats.js';
 import { startWork, pauseWork, stopForTask, closeSession, activeOf, isActive, durMs, workMsOfTask, workMsOn, spanOf, normalizeActive,
-         gapCheck, capOf, workTotals, sessionsToCSV, parseSessions, mergeSessions, fmtHMS, fmtWork, SESS_HEADER, SLEEP_MS } from '../src/worktime.js';
+         gapCheck, capOf, workTotals, sessionsToCSV, parseSessions, mergeSessions, fmtHMS, fmtWork, fmtLead, SESS_HEADER, SLEEP_MS } from '../src/worktime.js';
 
 assert.strictEqual(new Date(2026, 9, 25, 3, 30).getTimezoneOffset(), -60, 'a teszt Europe/Budapest zónában fut');
 const T = s => new Date(s).getTime();                    // helyi idő, zóna nélküli bélyegből
@@ -211,4 +211,51 @@ assert.strictEqual(normalizeActive([mk('1', 'a', '2026-11-09T09:00:00')]), 0);
   assert.deepStrictEqual([wt.get('a').ms / MIN, wt.get('a').n, wt.get('b').ms / MIN, wt.get('b').n], [45, 2, 20, 1], 'feladatonkénti összeg: lezárt + futó');
   assert.strictEqual(wt.get('c'), undefined);
 }
+// 18) munkaidő-térkép modellje: napokra és feladatokra bontva, az éjfélen átnyúló munkamenet megosztva, jelek, átfutási idő ≠ ráfordítás
+{
+  const S = [mk('1', 'a', '2026-11-09T09:00:00'), mk('2', 'b', '2026-11-09T09:30:00'), mk('3', 'a', '2026-11-09T10:40:00'), mk('4', 'b', '2026-11-10T23:30:00')];
+  closeSession(S[0], T('2026-11-09T09:30:00'), 'valtas'); closeSession(S[1], T('2026-11-09T10:30:00'), 'szunet'); closeSession(S[2], T('2026-11-09T10:50:00'), 'kesz'); closeSession(S[3], T('2026-11-11T00:30:00'), 'szunet');
+  const tasks = [
+    { id: 'a', feladat: 'Feladat A', megbizo: '', statusz: 'kesz', letrehozva: '2026-11-09T08:00:00', lezarva: '2026-11-09T11:20:00', datum: '2026-11-09' },
+    { id: 'b', feladat: 'Feladat B', megbizo: '', statusz: 'nyitott', letrehozva: '2026-11-09T09:00:00', lezarva: '', datum: '2026-11-09' }
+  ];
+  const hist = [
+    { feladat: 'a', idopont: '2026-11-09T11:00:00', mezo: 'statusz', regi: 'nyitott', uj: 'kesz' },
+    { feladat: 'a', idopont: '2026-11-09T11:10:00', mezo: 'statusz', regi: 'kesz', uj: 'nyitott' },
+    { feladat: 'a', idopont: '2026-11-09T11:20:00', mezo: 'statusz', regi: 'nyitott', uj: 'kesz' },
+    { feladat: 'a', idopont: '2026-11-09T11:25:00', mezo: 'megbizo', regi: '', uj: 'X' }
+  ];
+  const days = ['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14', '2026-11-15'], now = T('2026-11-15T20:00:00');
+  const m = timeMapModel(S, tasks, hist, days, now);
+  assert.deepStrictEqual(m.days.map(d => d.day), ['2026-11-09', '2026-11-10', '2026-11-11'], 'csak a mért napok szerepelnek');
+  assert.deepStrictEqual(m.days.map(d => d.w / MIN), [100, 30, 30], 'az éjfélen átnyúló munkamenet két napra oszlik');
+  assert.strictEqual(m.tiles.totalMs, 160 * MIN); assert.strictEqual(m.tiles.totalMs, workStats(S, tasks, days, now).totalMs, 'ugyanaz a mért idő, mint a statisztikában');
+  assert.deepStrictEqual([m.tiles.n, m.tiles.avgMs / MIN, m.tiles.longestMs / MIN, m.tiles.days, m.tiles.tasks, m.tiles.done], [4, 40, 60, 3, 2, 1]);
+  assert.strictEqual(m.tiles.avgN, 1); assert.strictEqual(m.tiles.avgTaskMs, 40 * MIN, 'átlagos ráfordítás: a kész és mért feladatra');
+  const d0 = m.days[0];
+  assert(Math.abs(d0.share - 100 / 110) < 1e-9, 'a mért arány az első indítás és az utolsó leállítás közötti időhöz képest');
+  assert.deepStrictEqual(d0.rows.map(r => [r.id, r.name, r.ms / MIN]), [['a', 'Feladat A', 40], ['b', 'Feladat B', 60]], 'sor = feladat, az első indítás sorrendjében');
+  assert.strictEqual(d0.rows[0].segs.length, 2); assert.strictEqual(d0.rows[0].created, T('2026-11-09T08:00:00'));
+  assert.deepStrictEqual(d0.rows[0].done, [T('2026-11-09T11:00:00'), T('2026-11-09T11:20:00')], 'lezárás-jelek a naplóból');
+  assert.deepStrictEqual(d0.rows[0].reopen, [T('2026-11-09T11:10:00')]); assert.strictEqual(d0.rows[1].created, T('2026-11-09T09:00:00'));
+  assert.strictEqual(m.days[1].rows[0].created, null, 'a létrehozás jele csak a létrehozás napján'); assert.strictEqual(m.days[2].rows[0].segs[0].s0, T('2026-11-10T23:30:00'), 'a tooltip az eredeti kezdetet ismeri');
+  // átfutási idő ≠ ráfordítás: B nyitva volt 6 napot, de 2 órát dolgoztak rajta
+  assert.deepStrictEqual(m.lead.map(r => [r.id, r.lead / MIN, r.work / MIN, r.done, r.reopened]), [['b', 6 * 1440 + 11 * 60, 120, false, false], ['a', 200, 40, true, true]]);
+  assert.strictEqual(m.findings.length, 3);
+  const text = m.findings.map(f => f.map(p => typeof p === 'string' ? p : p.b).join('')).join('\n');
+  assert(text.includes('75%-a') && text.includes('2 darab, legalább 45 perces') && text.includes('4 munkamenetből 0 rövidebb'), text);
+  assert(text.includes('Feladat B') && text.includes('6 n 11 ó') && text.includes('telt el eddig') && text.includes('2 ó 00 p (1%)'), text);
+  assert(text.includes('hétfő 91%, kedd 100%, szerda 100%'), text);
+  // futó munkamenet: folyamatban jelölés; a nem mért időszak üres modell
+  const run = [mk('r', 'b', '2026-11-12T09:00:00')], mr = timeMapModel(run, tasks, hist, days, T('2026-11-12T09:45:00'));
+  assert.strictEqual(mr.days[0].rows[0].segs[0].run, true); assert.strictEqual(mr.tiles.totalMs, 45 * MIN); assert(mr.findings.join('').includes('a mai nap még fut'));
+  const sh = timeMapModel([Object.assign(mk('s', 'b', '2026-11-09T09:00:00'), { veg: '2026-11-09T09:05:00', idotartam_mp: '300', ok: 'szunet' })], tasks, hist, days, now);
+  assert(sh.findings[0].map(p => typeof p === 'string' ? p : p.b).join('') === 'Egyik munkamenet sem érte el a 45 percet; a 1 munkamenetből 1 rövidebb 10 percnél.', 'nincs hosszú blokk: nem írunk 0%-ot');
+  const empty = timeMapModel([], tasks, hist, days, now);
+  assert.deepStrictEqual([empty.days.length, empty.lead.length, empty.findings.length, empty.tiles.totalMs, empty.tiles.avgTaskMs], [0, 0, 0, 0, null]);
+  // törölt feladat és hiányzó létrehozási idő: nem omlik össze, az átfutási sorból kimarad
+  const orphan = timeMapModel([mk('o', 'gone', '2026-11-09T09:00:00')], [{ id: 'q', feladat: 'Q', statusz: 'nyitott', letrehozva: '', lezarva: '' }], [], days, T('2026-11-09T09:20:00'));
+  assert.strictEqual(orphan.days[0].rows[0].name, '(törölt feladat)'); assert.strictEqual(orphan.lead.length, 0);
+}
+assert.deepStrictEqual([fmtLead(46 * 60 * MIN), fmtLead(48 * 60 * MIN), fmtLead(155 * 60 * MIN), fmtLead(25 * MIN)], ['46 ó 00 p', '2 n 0 ó', '6 n 11 ó', '25 p'], 'átfutási idő formátuma');
 console.log('Munkamenet pure tesztek ✔');

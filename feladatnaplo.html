@@ -389,6 +389,61 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .jl li.gone .jx{color:var(--dim);text-decoration:line-through}
 @media (max-width:620px){ .jl li{grid-template-columns:44px minmax(0,1fr)} .jl .jx{grid-column:2} .hist li{grid-template-columns:90px minmax(0,1fr)} }
 
+/* munkaidő-térkép (Áttekintés alja) */
+.tmap{--tm-bar:#1d9fc4; --tm-ctx:#5a7385; --tm-now:#ffc233; --tm-good:#0ca30c; --tm-axis:#27495c; --tm-grid:#16303f; --tm-surf:#0a1a24;margin-top:16px}
+.tmap[hidden]{display:none}
+.tmap .ph{flex-wrap:wrap}
+.tmap .ph .rng{white-space:nowrap}
+.tmap .ph .mini{margin-left:auto}
+.tm-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:2px 0 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.tm-tile{padding:9px 14px;border-left:1px solid var(--line);min-width:0}
+.tm-tile:first-child{padding-left:0;border-left:0}
+.tm-tile .l{font:600 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tm-tile .v{font-size:22px;line-height:1.15;white-space:nowrap;margin-top:2px;color:var(--ink)}
+.tm-tile .s{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm-card{margin-top:16px}
+.tm-card h3,.tmap #tmBody>h3{margin:0 0 2px;font-size:13px;font-weight:600;color:var(--ink)}
+.tm-card .cap{margin:0 0 6px;font-size:11.5px;color:var(--muted);text-transform:none;letter-spacing:0}
+.tm-leg{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:11px;color:var(--muted);margin:0 0 4px}
+.tm-leg span{display:inline-flex;align-items:center;gap:6px}
+.tm-dayh{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 12px;font-size:12.5px;margin-top:10px}
+.tm-dayh b{font-weight:600;color:var(--ink)} .tm-dayh span{color:var(--muted)}
+.tmap svg{display:block;width:100%;height:auto;overflow:visible}
+.tmap svg text{font:11px "Bahnschrift","Segoe UI",system-ui,sans-serif;fill:var(--muted)}
+.tmap svg text.t1{fill:#a9c1cf} .tmap svg text.t0{fill:var(--ink)} .tmap svg text.tm-nowt{fill:var(--tm-now)}
+.tm-bar{fill:var(--tm-bar)} .tm-bar.run{fill-opacity:.55} .tm-ctx{fill:var(--tm-ctx)}
+.tm-grid{stroke:var(--tm-grid);stroke-width:1} .tm-end{stroke:var(--tm-axis);stroke-width:1.5} .tm-now{stroke:var(--tm-now);stroke-width:1.5}
+.tm-rd{fill:var(--tm-bar);stroke:var(--tm-surf);stroke-width:2}
+.tm-mk-c{fill:#a9c1cf;stroke:var(--tm-surf);stroke-width:2}
+.tm-mk-d{fill:var(--tm-good);stroke:var(--tm-surf);stroke-width:2}
+.tm-mk-t{fill:none;stroke:#fff;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.tm-mk-r{fill:var(--tm-surf);stroke:var(--ink);stroke-width:2}
+.tmap .hit{cursor:default;outline:none}
+.tmap .hit:hover .m,.tmap .hit:focus-visible .m{filter:brightness(1.25)}
+.tmap .hit:hover .tm-mk-d,.tmap .hit:focus-visible .tm-mk-d,.tmap .hit:hover .tm-mk-r,.tmap .hit:focus-visible .tm-mk-r{stroke:var(--ink)}
+@keyframes tmpulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tmap .run-dot{animation:tmpulse 1.6s infinite}
+@media (prefers-reduced-motion:reduce){.tmap .run-dot{animation:none}}
+.tm-find{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:12.5px;color:#a9c1cf}
+.tm-find li{padding-left:16px;position:relative}
+.tm-find li::before{content:"";position:absolute;left:0;top:.6em;width:7px;height:2px;background:var(--tm-bar)}
+.tm-find b{color:var(--ink);font-weight:600}
+.tm-empty,.tm-more{margin:8px 0 2px;font-size:12px;color:var(--muted)}
+.tm-tip{position:absolute;z-index:5;pointer-events:none;min-width:150px;max-width:280px;padding:8px 10px;background:#06121a;border:1px solid var(--tm-axis);border-radius:3px;box-shadow:0 6px 18px rgba(0,0,0,.5);opacity:0;transition:opacity .08s}
+.tm-tip.on{opacity:1}
+.tm-tip .tv{font-size:15px;font-weight:600;color:var(--ink)} .tm-tip .tl{font-size:12px;color:#a9c1cf} .tm-tip .tm{font-size:11.5px;color:var(--muted)}
+.tm-table{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0 10px}
+.tm-table th,.tm-table td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line)}
+.tm-table th{font:600 10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tm-table .n{text-align:right;font-variant-numeric:tabular-nums}
+.tmap #tmBody>h3{margin-top:12px}
+@media (max-width:640px){
+  .tm-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tm-tile:nth-child(odd){padding-left:0;border-left:0}
+  .tm-tile:nth-child(n+3){border-top:1px solid var(--line)}
+  .tm-tile .v{font-size:19px} .tm-tile .s{white-space:normal}
+}
+
 /* nyomtatás / PDF */
 @media print{
   @page{margin:13mm}
@@ -513,6 +568,11 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   <section id="overview" class="overview">
   <div class="dash-bar"><span class="cap">Áttekintés</span><span class="line"></span><button type="button" class="mini" id="pplToggle">megbízók</button><button type="button" class="mini" id="dashToggle">elrejtés</button></div>
   <section id="dash" class="dash"></section>
+  <section id="tmap" class="panel tmap" aria-label="Munkaidő-térkép">
+    <div class="ph"><span class="cap">Munkaidő-térkép · mért munka a Hét panel hetén</span><span class="rng mono" id="tmRange"></span><button type="button" class="mini" id="tmTv" aria-pressed="false">táblázat nézet</button></div>
+    <div id="tmBody"></div>
+    <div class="tm-tip" id="tmTip" role="status"></div>
+  </section>
   <section id="people" class="panel people" hidden>
     <div class="ph"><span class="cap">Megbízók · kitől hány feladat jött</span>
       <span class="seg pseg" id="pplPeriod"><button type="button" data-p="w">Hét</button><button type="button" data-p="m">Hónap</button><button type="button" data-p="all" aria-pressed="true">Összes</button></span>
@@ -537,7 +597,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 'use strict';
 (() => {
   // src/state.js
-  var VERSION = true ? "2.9.4" : "dev";
+  var VERSION = true ? "2.10.0" : "dev";
   var FILE_NAME = "feladatnaplo.csv";
   var BACKUP_DIR = "mentesek";
   var BACKUP_KEEP = 60;
@@ -688,6 +748,12 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     return h < 48 ? `${h} \xF3r\xE1ja` : `${Math.floor(h / 24)} napja`;
   };
   var fmtDur = (ms) => ms < 36e5 ? `${Math.max(1, Math.round(ms / 6e4))} p` : ms < 48 * 36e5 ? `${(ms / 36e5).toFixed(1).replace(".", ",")} \xF3` : `${(ms / 864e5).toFixed(1).replace(".", ",")} n`;
+  var WDN = ["vas\xE1rnap", "h\xE9tf\u0151", "kedd", "szerda", "cs\xFCt\xF6rt\xF6k", "p\xE9ntek", "szombat"];
+  var MON = ["jan.", "febr.", "m\xE1rc.", "\xE1pr.", "m\xE1j.", "j\xFAn.", "j\xFAl.", "aug.", "szept.", "okt.", "nov.", "dec."];
+  var dayLabel = (ds) => {
+    const [y, m, d] = ds.split("-").map(Number);
+    return `${WDN[new Date(y, m - 1, d).getDay()]} \xB7 ${MON[m - 1]} ${d}.`;
+  };
   function weekDays(offset = 0, now = /* @__PURE__ */ new Date()) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     d.setDate(d.getDate() - (d.getDay() + 6) % 7 + offset * 7);
@@ -730,7 +796,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     let due = toMs(t.hatarido);
     if (isNaN(due)) return null;
     if (!hasTime) due += 86399999;
-    const dday = t.hatarido.slice(0, 10), hm2 = t.hatarido.slice(11, 16), md = dday.slice(5).replace("-", ".") + ".";
+    const dday = t.hatarido.slice(0, 10), hm3 = t.hatarido.slice(11, 16), md3 = dday.slice(5).replace("-", ".") + ".";
     const today = dstr(new Date(now));
     const tm = new Date(now);
     tm.setDate(tm.getDate() + 1);
@@ -738,7 +804,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     let state, label;
     if (t.statusz === "kesz") {
       state = "done";
-      label = hasTime ? `${md} ${hm2}` : md;
+      label = hasTime ? `${md3} ${hm3}` : md3;
     } else if (diff < 0) {
       state = "over";
       label = "lej\xE1rt \xB7 " + fmtAgo(-diff);
@@ -750,13 +816,13 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
       label = fmtLeft(diff) + " m\xFAlva";
     } else if (dday === today) {
       state = "today";
-      label = hasTime ? "ma " + hm2 : "ma";
+      label = hasTime ? "ma " + hm3 : "ma";
     } else if (dday === dstr(tm)) {
       state = "soon";
-      label = hasTime ? "holnap " + hm2 : "holnap";
+      label = hasTime ? "holnap " + hm3 : "holnap";
     } else {
       state = "later";
-      label = hasTime ? `${md} ${hm2}` : md;
+      label = hasTime ? `${md3} ${hm3}` : md3;
     }
     return { state, label, due, diff, hasTime };
   }
@@ -820,7 +886,7 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     }
     return out + hl(text.slice(last), ht);
   }
-  function dayLabel(ds) {
+  function dayLabel2(ds) {
     const [y, m, d] = ds.split("-").map(Number);
     let s = new Date(y, m - 1, d).toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric", weekday: "long" });
     const yd = /* @__PURE__ */ new Date();
@@ -1241,6 +1307,10 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     const m = Math.round(Math.max(0, ms) / 6e4);
     return m < 60 ? `${m} p` : `${Math.floor(m / 60)} \xF3 ${p2(m % 60)} p`;
   };
+  var fmtLead = (ms) => {
+    const m = Math.round(Math.max(0, ms) / 6e4);
+    return m < 48 * 60 ? fmtWork(ms) : `${Math.floor(m / 1440)} n ${Math.floor(m % 1440 / 60)} \xF3`;
+  };
 
   // src/livedesk.js
   var shortText = (t) => t.feladat.replace(TAG_RE, "").trim() || t.feladat;
@@ -1512,6 +1582,381 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     const sorted = (m) => [...m.values()].sort((a, b) => b.ms - a.ms || a.name.localeCompare(b.name, "hu"));
     return { totalMs, per, tasks: sorted(task), who: sorted(who), avgTaskMs: n ? sum / n : null, avgN: n };
   }
+  function timeMapModel(sessions, tasks, hist, days, now = Date.now(), cap = Infinity) {
+    const byId = new Map(tasks.map((t) => [t.id, t])), ww = workStats(sessions, tasks, days, now, cap);
+    const nameOf2 = (id) => {
+      const t = byId.get(id);
+      return t ? t.feladat : "(t\xF6r\xF6lt feladat)";
+    };
+    const doneEv = /* @__PURE__ */ new Map(), reopenEv = /* @__PURE__ */ new Map(), push = (m, k, v) => {
+      const a = m.get(k) || [];
+      a.push(v);
+      m.set(k, a);
+    };
+    for (const e of hist || []) {
+      if (e.mezo !== "statusz") continue;
+      const t = toMs(e.idopont);
+      if (isNaN(t)) continue;
+      if (e.uj === "kesz") push(doneEv, e.feladat, t);
+      else if (e.regi === "kesz") push(reopenEv, e.feladat, t);
+    }
+    const inDay = (t, lo, hi) => t >= lo && t < hi, per = /* @__PURE__ */ new Map(), dayList = [];
+    for (const d of days) {
+      const [lo, hi] = dayBounds(d), rows = /* @__PURE__ */ new Map();
+      let w = 0, a = Infinity, b = -Infinity;
+      for (const s of sessions) {
+        const x = spanOf(s, now, cap);
+        if (!x) continue;
+        const sa = Math.max(lo, x[0]), sb = Math.min(hi, x[1]);
+        if (sb <= sa) continue;
+        const seg = { id: s.id, a: sa, b: sb, s0: x[0], s1: x[1], run: isActive(s), ok: s.ok || "" };
+        const r = rows.get(s.feladat_id) || { id: s.feladat_id, name: nameOf2(s.feladat_id), ms: 0, segs: [], first: sa };
+        r.segs.push(seg);
+        r.ms += sb - sa;
+        rows.set(s.feladat_id, r);
+        w += sb - sa;
+        a = Math.min(a, sa);
+        b = Math.max(b, sb);
+        per.set(s.id, (per.get(s.id) || 0) + sb - sa);
+      }
+      if (!rows.size) continue;
+      const list = [...rows.values()].sort((p, q) => p.first - q.first);
+      for (const r of list) {
+        const t = byId.get(r.id), c = t ? toMs(t.letrehozva) : NaN, dn = (doneEv.get(r.id) || []).filter((v) => inDay(v, lo, hi)), ro = (reopenEv.get(r.id) || []).filter((v) => inDay(v, lo, hi));
+        r.created = !isNaN(c) && inDay(c, lo, hi) ? c : null;
+        if (!dn.length && t && t.statusz === "kesz" && !(doneEv.get(r.id) || []).length) {
+          const z = toMs(t.lezarva);
+          if (!isNaN(z) && inDay(z, lo, hi)) dn.push(z);
+        }
+        r.done = dn;
+        r.reopen = ro;
+      }
+      dayList.push({ day: d, a, b, w, share: b > a ? w / (b - a) : 1, rows: list });
+    }
+    const lead = [];
+    for (const wt of ww.tasks) {
+      const t = byId.get(wt.id);
+      if (!t) continue;
+      const c = toMs(t.letrehozva), done = t.statusz === "kesz", end = done ? toMs(t.lezarva) : now;
+      if (isNaN(c) || isNaN(end) || end <= c) continue;
+      lead.push({ id: t.id, name: t.feladat, lead: end - c, work: workMsOfTask(sessions, t.id, now, cap), done, reopened: reopenEv.has(t.id), created: c, end });
+    }
+    lead.sort((p, q) => q.lead - p.lead);
+    const doneN = ww.tasks.filter((x) => {
+      const t = byId.get(x.id);
+      return t && t.statusz === "kesz";
+    }).length;
+    const lens = [...per.values()], tiles = {
+      totalMs: ww.totalMs,
+      n: lens.length,
+      avgMs: lens.length ? ww.totalMs / lens.length : 0,
+      longestMs: lens.reduce((m, v) => Math.max(m, v), 0),
+      days: dayList.length,
+      tasks: ww.tasks.length,
+      done: doneN,
+      avgTaskMs: ww.avgTaskMs,
+      avgN: ww.avgN
+    };
+    const findings = [];
+    if (lens.length) {
+      const big = lens.filter((v) => v >= 45 * 6e4), bigMs = big.reduce((x, v) => x + v, 0), short = lens.filter((v) => v < 10 * 6e4).length;
+      findings.push(big.length ? ["A m\xE9rt id\u0151 ", { b: Math.round(bigMs / ww.totalMs * 100) + "%-a" }, ` ${big.length} darab, legal\xE1bb 45 perces blokkb\xF3l \xE1ll; a ${lens.length} munkamenetb\u0151l ${short} r\xF6videbb 10 percn\xE9l.`] : [`Egyik munkamenet sem \xE9rte el a 45 percet; a ${lens.length} munkamenetb\u0151l `, { b: String(short) }, " r\xF6videbb 10 percn\xE9l."]);
+    }
+    if (lead.length) {
+      const w = lead[0], pct = w.work / w.lead * 100;
+      findings.push(["A leghosszabb \xE1tfut\xE1s\xFA feladat (" + w.name + ") ", { b: fmtLead(w.lead) }, " alatt " + (w.done ? "z\xE1rult le" : "telt el eddig") + ", ebb\u0151l ", { b: `${fmtWork(w.work)} (${pct < 1 ? "<1" : Math.round(pct)}%)` }, " volt m\xE9rt munka" + (w.reopened ? " \u2013 k\xF6zben lez\xE1rt\xE1k, majd \xFAjranyitott\xE1k." : ".")]);
+    }
+    if (dayList.length) {
+      const dn = (d) => WDN[(/* @__PURE__ */ new Date(d.day + "T12:00:00")).getDay()];
+      findings.push(["Az els\u0151 ind\xEDt\xE1s \xE9s az utols\xF3 le\xE1ll\xEDt\xE1s k\xF6z\xF6tti id\u0151 ", { b: dayList.map((d) => `${dn(d)} ${Math.round(d.share * 100)}%`).join(", ") }, " volt m\xE9rve" + (dayList.some((d) => d.rows.some((r) => r.segs.some((g) => g.run))) ? " (a mai nap m\xE9g fut)" : "") + ". A k\xFCl\xF6nbs\xE9g r\xE9szben m\xE9r\xE9s n\xE9lk\xFCli munka (megbesz\xE9l\xE9s, sz\xFCnet), mert az id\u0151m\xE9r\xE9s nem k\xF6telez\u0151."]);
+    }
+    return { days: dayList, tiles, lead, findings };
+  }
+
+  // src/timemap.js
+  var NS = "http://www.w3.org/2000/svg";
+  var AX0 = 8;
+  var AX1 = 17;
+  var WORK_END = 16.5;
+  var MAXLEAD = 8;
+  var OKTXT = { szunet: "sz\xFCnet", kesz: "k\xE9sz", valtas: "v\xE1lt\xE1s", tarolo: "T\xE1rol\xF3ba t\xE9ve", torles: "t\xF6r\xF6lve" };
+  var hm2 = (t) => {
+    const d = new Date(t);
+    return pad(d.getHours()) + ":" + pad(d.getMinutes());
+  };
+  var clip2 = (s, n) => s.length > n ? s.slice(0, Math.max(1, n - 1)) + "\u2026" : s;
+  var md = (ds) => ds.slice(5).replace("-", ".") + ".";
+  var lastKey = "";
+  var tv = false;
+  var wired = false;
+  var rt = 0;
+  var svgEl = (n, a = {}, parent, text) => {
+    const e = document.createElementNS(NS, n);
+    for (const k in a) e.setAttribute(k, a[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  var htmlEl = (n, cls, text, parent) => {
+    const e = document.createElement(n);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  };
+  function showTip(lines, x, y) {
+    const tip = $("#tmTip"), box = $("#tmap");
+    tip.replaceChildren();
+    [["tv", lines[0]], ["tl", lines[1]], ["tm", lines[2]]].forEach(([c, t]) => {
+      if (t) htmlEl("div", c, t, tip);
+    });
+    tip.classList.add("on");
+    const r = box.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight;
+    let L = x - r.left + 14, T = y - r.top - h - 12;
+    if (T < 4) T = y - r.top + 18;
+    if (L + w > r.width - 4) L = x - r.left - w - 14;
+    if (L < 4) L = 4;
+    tip.style.left = L + "px";
+    tip.style.top = T + "px";
+  }
+  var hideTip = () => $("#tmTip").classList.remove("on");
+  function hookTip(g, lines) {
+    g.setAttribute("tabindex", "0");
+    g.classList.add("hit");
+    g.addEventListener("pointermove", (e) => showTip(lines, e.clientX, e.clientY));
+    g.addEventListener("pointerleave", hideTip);
+    g.addEventListener("focus", () => {
+      const b = g.getBoundingClientRect();
+      showTip(lines, b.left + b.width / 2, b.top);
+    });
+    g.addEventListener("blur", hideTip);
+  }
+  function drawTiles(host, m) {
+    const t = m.tiles, T = [
+      ["M\xE9rt id\u0151", fmtWork(t.totalMs), `${t.days} munkanap \xB7 ${t.n} munkamenet`],
+      ["\xC1tlagos munkamenet", fmtWork(t.avgMs), "leghosszabb: " + fmtWork(t.longestMs)],
+      ["Feladat", String(t.tasks), `${t.done} k\xE9sz \xB7 ${t.tasks - t.done} folyamatban`],
+      ["R\xE1ford\xEDt\xE1s / k\xE9sz feladat", t.avgTaskMs == null ? "\u2013" : fmtWork(t.avgTaskMs), t.avgN ? `\xE1tlag ${t.avgN} k\xE9sz feladatra` : "m\xE9g nincs k\xE9sz, m\xE9rt feladat"]
+    ];
+    const box = htmlEl("div", "tm-tiles", null, host);
+    T.forEach(([l, v, s]) => {
+      const d = htmlEl("div", "tm-tile", null, box);
+      htmlEl("div", "l", l, d);
+      htmlEl("div", "v", v, d);
+      htmlEl("div", "s", s, d);
+    });
+  }
+  function legend(host, items) {
+    const box = htmlEl("div", "tm-leg", null, host);
+    items.forEach(([draw, label]) => {
+      const s = htmlEl("span", "", null, box), sv = svgEl("svg", { width: 18, height: 14, viewBox: "0 0 18 14" });
+      sv.style.width = "18px";
+      draw(sv);
+      s.appendChild(sv);
+      s.appendChild(document.createTextNode(label));
+    });
+  }
+  function mark(g, cx, cy, kind) {
+    if (kind === "create") svgEl("path", { d: `M${cx} ${cy - 5}L${cx + 5} ${cy}L${cx} ${cy + 5}L${cx - 5} ${cy}Z`, class: "tm-mk-c" }, g);
+    else if (kind === "done") {
+      svgEl("circle", { cx, cy, r: 6.5, class: "tm-mk-d" }, g);
+      svgEl("path", { d: `M${cx - 3} ${cy}L${cx - 0.8} ${cy + 2.4}L${cx + 3.2} ${cy - 2.6}`, class: "tm-mk-t" }, g);
+    } else if (kind === "reopen") svgEl("circle", { cx, cy, r: 5.5, class: "tm-mk-r" }, g);
+  }
+  function drawTimeline(host, m, W, now) {
+    const narrow = W < 640, labW = narrow ? 0 : Math.min(220, Math.round(W * 0.26)), totW = narrow ? 0 : 66, x0 = labW + 8, x1 = W - totW - 6, pw = x1 - x0;
+    const X = (t) => {
+      const d = new Date(t);
+      return x0 + (d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600 - AX0) / (AX1 - AX0) * pw;
+    };
+    const pitch = narrow ? 50 : 34, bar = 16;
+    m.days.forEach((day) => {
+      const isNowDay = new Date(day.a).toDateString() === new Date(now).toDateString(), running = day.rows.some((r) => r.segs.some((g) => g.run));
+      const hd = htmlEl("div", "tm-dayh", null, host);
+      htmlEl("b", "", dayLabel(day.day) + " \xB7 " + fmtWork(day.w) + " m\xE9rve", hd);
+      htmlEl("span", "", hm2(day.a) + "\u2013" + (isNowDay && running ? "most" : hm2(day.b)) + " k\xF6z\xF6tt, ennek " + Math.round(day.share * 100) + "%-a m\xE9rve", hd);
+      const rows = day.rows, H = rows.length * pitch + 24 + 14;
+      const root = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": `${dayLabel(day.day)}: ${rows.length} feladat, ${fmtWork(day.w)} m\xE9rt munka` });
+      root.style.height = H + "px";
+      host.appendChild(root);
+      const svg = svgEl("g", { transform: "translate(0,14)" }, root);
+      for (let h = AX0; h <= AX1; h++) {
+        const x = x0 + (h - AX0) / (AX1 - AX0) * pw;
+        svgEl("line", { x1: x, x2: x, y1: 0, y2: rows.length * pitch, class: "tm-grid" }, svg);
+        if (!narrow || h % 2 === 0) svgEl("text", { x, y: rows.length * pitch + 15, "text-anchor": "middle" }, svg, pad(h) + ":00");
+      }
+      const xe = x0 + (WORK_END - AX0) / (AX1 - AX0) * pw;
+      svgEl("line", { x1: xe, x2: xe, y1: -2, y2: rows.length * pitch, class: "tm-end" }, svg);
+      svgEl("text", { x: xe + 4, y: -4 }, svg, "16:30");
+      if (isNowDay) {
+        const xn = X(now);
+        svgEl("line", { x1: xn, x2: xn, y1: -2, y2: rows.length * pitch, class: "tm-now" }, svg);
+        svgEl("text", { x: xn - 4, y: -4, "text-anchor": "end", class: "tm-nowt" }, svg, "most " + hm2(now));
+      }
+      rows.forEach((r, i) => {
+        const y = i * pitch, by = y + (narrow ? 24 : (pitch - bar) / 2);
+        svgEl("line", { x1: 0, x2: W, y1: y + pitch, y2: y + pitch, class: "tm-grid" }, svg);
+        if (narrow) svgEl("text", { x: 0, y: y + 16, class: "t1" }, svg, clip2(r.name, 34) + " \xB7 " + fmtWork(r.ms));
+        else {
+          const lab = svgEl("text", { x: 0, y: y + pitch / 2 + 4, class: "t1" }, svg, clip2(r.name, Math.floor(labW / 6.4)));
+          svgEl("title", {}, lab, r.name);
+          svgEl("text", { x: W, y: y + pitch / 2 + 4, "text-anchor": "end", class: "t0" }, svg, fmtWork(r.ms));
+        }
+        r.segs.forEach((s) => {
+          const g = svgEl("g", {}, svg), xa = X(s.a), xb = Math.max(xa + 3, X(s.b));
+          svgEl("rect", { x: xa, y: by, width: xb - xa, height: bar, rx: 4, class: "m tm-bar" + (s.run ? " run" : "") }, g);
+          if (s.run) svgEl("circle", { cx: xb, cy: by + bar / 2, r: 4.5, class: "tm-rd run-dot" }, g);
+          svgEl("rect", { x: xa - 2, y: by - 6, width: xb - xa + 4, height: bar + 12, fill: "transparent" }, g);
+          hookTip(g, [fmtWork(s.b - s.a), hm2(s.s0) + "\u2013" + (s.run ? "most (folyamatban)" : hm2(s.s1)) + " \xB7 " + r.name, s.run ? "a munkamenet m\xE9g fut" : "lez\xE1r\xE1s oka: " + (OKTXT[s.ok] || s.ok || "\u2013")]);
+        });
+        const cy = by + bar / 2;
+        if (r.created != null) {
+          const g = svgEl("g", {}, svg);
+          mark(g, X(r.created), cy, "create");
+          hookTip(g, ["L\xE9trehozva", hm2(r.created) + " \xB7 " + r.name]);
+        }
+        r.done.forEach((t) => {
+          const g = svgEl("g", {}, svg);
+          mark(g, X(t), cy, "done");
+          hookTip(g, ["Lez\xE1rva (k\xE9sz)", hm2(t) + " \xB7 " + r.name]);
+        });
+        r.reopen.forEach((t) => {
+          const g = svgEl("g", {}, svg);
+          mark(g, X(t), cy, "reopen");
+          hookTip(g, ["\xDAjranyitva", hm2(t) + " \xB7 " + r.name]);
+        });
+      });
+    });
+  }
+  function drawLead(host, m, W) {
+    const rows = m.lead.slice(0, MAXLEAD), narrow = W < 640;
+    if (!rows.length) {
+      htmlEl("p", "tm-empty", "Egyik feladatnak sincs r\xF6gz\xEDtett l\xE9trehoz\xE1si ideje, ez\xE9rt az \xE1tfut\xE1si id\u0151 nem sz\xE1molhat\xF3.", host);
+      return;
+    }
+    const labW = narrow ? 0 : Math.min(220, Math.round(W * 0.26)), ratW = narrow ? 0 : 56, x0 = labW + 8, pw = W - x0 - ratW - 74, pitch = narrow ? 60 : 44, bh = 10;
+    const max = Math.max(...rows.map((r) => Math.max(r.lead, r.work))), H = rows.length * pitch + 4;
+    const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "\xC1tfut\xE1si id\u0151 \xE9s r\xE1ford\xEDt\xE1s feladatonk\xE9nt" });
+    svg.style.height = H + "px";
+    host.appendChild(svg);
+    rows.forEach((r, i) => {
+      const y = i * pitch, top = y + (narrow ? 22 : (pitch - 2 * bh - 2) / 2), xs = narrow ? 0 : x0, ps = narrow ? W - 110 : pw, Sx = (v) => Math.max(2, v / max * ps);
+      svgEl("line", { x1: 0, x2: W, y1: y + pitch, y2: y + pitch, class: "tm-grid" }, svg);
+      if (narrow) svgEl("text", { x: 0, y: y + 14, class: "t1" }, svg, clip2(r.name, 40));
+      else {
+        const l = svgEl("text", { x: 0, y: y + pitch / 2 + 4, class: "t1" }, svg, clip2(r.name, Math.floor(labW / 6.4)));
+        svgEl("title", {}, l, r.name);
+      }
+      const g1 = svgEl("g", {}, svg);
+      svgEl("rect", { x: xs, y: top, width: Sx(r.lead), height: bh, rx: 3, class: "m tm-ctx" }, g1);
+      svgEl("text", { x: xs + Sx(r.lead) + 6, y: top + bh - 1, class: "t1" }, g1, fmtLead(r.lead));
+      const d0 = new Date(r.created), d1 = new Date(r.end), dd = (d) => `${md(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)} ${hm2(d)}`;
+      hookTip(g1, [fmtLead(r.lead), "\xE1tfut\xE1si id\u0151 \xB7 " + r.name, dd(d0) + " (l\xE9trehozva) \u2192 " + (r.done ? dd(d1) + " (utols\xF3 lez\xE1r\xE1s)" : "most")]);
+      const g2 = svgEl("g", {}, svg);
+      svgEl("rect", { x: xs, y: top + bh + 2, width: Sx(r.work), height: bh, rx: 3, class: "m tm-bar" }, g2);
+      svgEl("text", { x: xs + Sx(r.work) + 6, y: top + 2 * bh + 1, class: "t0" }, g2, fmtWork(r.work));
+      const pr = r.work / r.lead * 100, pct = (pr > 0 && pr < 1 ? "<1" : Math.round(pr)) + "%";
+      hookTip(g2, [fmtWork(r.work), "r\xE1ford\xEDt\xE1s (m\xE9rt munka) \xB7 " + r.name, pct + " az \xE1tfut\xE1si id\u0151b\u0151l"]);
+      if (narrow) svgEl("text", { x: W, y: y + 14, "text-anchor": "end", class: "t0" }, svg, pct + (r.reopened ? " \xB7 \xFAjranyitva" : ""));
+      else svgEl("text", { x: W, y: y + pitch / 2 + 4, "text-anchor": "end", class: "t0" }, svg, pct);
+    });
+    if (m.lead.length > MAXLEAD) htmlEl("p", "tm-more", `+ ${m.lead.length - MAXLEAD} tov\xE1bbi feladat (a t\xE1bl\xE1zat n\xE9zetben mind l\xE1tszik)`, host);
+  }
+  function drawFindings(host, m) {
+    const ul = htmlEl("ul", "tm-find", null, host);
+    m.findings.forEach((parts) => {
+      const li = htmlEl("li", "", null, ul);
+      parts.forEach((p) => {
+        if (typeof p === "string") li.appendChild(document.createTextNode(p));
+        else htmlEl("b", "", p.b, li);
+      });
+    });
+  }
+  function drawTables(host, m) {
+    const mk = (title, head, rows) => {
+      htmlEl("h3", "", title, host);
+      const t = htmlEl("table", "tm-table", null, host), tr = htmlEl("tr", "", null, t);
+      head.forEach((x, i) => {
+        const th = htmlEl("th", i > 1 ? "n" : "", x, tr);
+        th.scope = "col";
+      });
+      rows.forEach((r) => {
+        const tr2 = htmlEl("tr", "", null, t);
+        r.forEach((x, i) => htmlEl("td", i > 1 ? "n" : "", x, tr2));
+      });
+    };
+    const segs = [];
+    m.days.forEach((d) => d.rows.forEach((r) => r.segs.forEach((s) => segs.push([r.name, d.day, hm2(s.s0), s.run ? "folyamatban" : hm2(s.s1), fmtWork(s.b - s.a), s.run ? "\u2013" : OKTXT[s.ok] || s.ok || "\u2013"]))));
+    mk("Munkamenetek", ["Feladat", "Nap", "Kezdet", "V\xE9g", "Id\u0151tartam", "Lez\xE1r\xE1s oka"], segs);
+    mk("\xC1tfut\xE1si id\u0151 \xE9s r\xE1ford\xEDt\xE1s", ["Feladat", "\xC1llapot", "\xC1tfut\xE1si id\u0151", "R\xE1ford\xEDt\xE1s", "Ar\xE1ny"], m.lead.map((r) => {
+      const p = r.work / r.lead * 100;
+      return [r.name, r.done ? "k\xE9sz" : "nyitott", fmtLead(r.lead), fmtWork(r.work), (p > 0 && p < 1 ? "<1" : Math.round(p)) + "%"];
+    }));
+    mk("Napi \xF6sszes\xEDt\xE9s", ["Nap", "Feladat", "M\xE9rt id\u0151", "Els\u0151 ind\xEDt\xE1s", "Utols\xF3 le\xE1ll\xEDt\xE1s"], m.days.map((d) => [d.day, d.rows.length + " feladat", fmtWork(d.w), hm2(d.a), d.rows.some((r) => r.segs.some((g) => g.run)) ? "folyamatban" : hm2(d.b)]));
+  }
+  function renderTimemap() {
+    const box = $("#tmap");
+    box.hidden = ov.hidden;
+    if (ov.hidden) return;
+    if (!wired) {
+      wired = true;
+      $("#tmTv").addEventListener("click", () => {
+        tv = !tv;
+        lastKey = "";
+        renderTimemap();
+      });
+      if (typeof ResizeObserver === "function") new ResizeObserver(() => {
+        clearTimeout(rt);
+        rt = setTimeout(renderTimemap, 80);
+      }).observe(box);
+    }
+    const host = $("#tmBody"), W = Math.max(280, Math.floor(host.clientWidth) || 900), now = Date.now(), wd = weekDays(ov.w, new Date(now));
+    const m = timeMapModel(st.sessions, st.tasks, st.hist, wd, now, capOf(live.gap));
+    $("#tmRange").textContent = md(wd[0]) + " \u2013 " + md(wd[6]);
+    $("#tmTv").textContent = tv ? "diagram n\xE9zet" : "t\xE1bl\xE1zat n\xE9zet";
+    $("#tmTv").setAttribute("aria-pressed", String(tv));
+    const key = JSON.stringify([m, tv, W]);
+    if (key === lastKey) return;
+    lastKey = key;
+    hideTip();
+    host.replaceChildren();
+    host.classList.toggle("tv", tv);
+    if (!m.days.length) {
+      htmlEl("p", "tm-empty", "Ebben a h\xE9ten nincs m\xE9rt munkamenet. Az id\u0151m\xE9r\xE9st a feladat \u25B6 gombj\xE1val ind\xEDthatod; a m\xE9rt id\u0151k itt jelennek meg id\u0151vonalon.", host);
+      return;
+    }
+    drawTiles(host, m);
+    if (tv) {
+      drawTables(host, m);
+      return;
+    }
+    const c1 = htmlEl("section", "tm-card", null, host);
+    htmlEl("h3", "", "Mikor \xE9s mire ment el a munkaid\u0151?", c1);
+    htmlEl("p", "cap", "Egy s\xE1v = egy munkamenet. Egy sor = egy feladat. Az id\u0151 a nap \xF3r\xE1i szerint halad.", c1);
+    legend(c1, [
+      [(sv) => svgEl("rect", { x: 1, y: 3, width: 16, height: 8, rx: 3, class: "tm-bar" }, sv), "munkamenet"],
+      [(sv) => svgEl("rect", { x: 1, y: 3, width: 16, height: 8, rx: 3, class: "tm-bar run" }, sv), "folyamatban"],
+      [(sv) => mark(sv, 9, 7, "create"), "l\xE9trehozva"],
+      [(sv) => mark(sv, 9, 7, "done"), "lez\xE1rva (k\xE9sz)"],
+      [(sv) => mark(sv, 9, 7, "reopen"), "\xFAjranyitva"],
+      [(sv) => svgEl("line", { x1: 9, x2: 9, y1: 1, y2: 13, class: "tm-now" }, sv), "most"],
+      [(sv) => svgEl("line", { x1: 9, x2: 9, y1: 1, y2: 13, class: "tm-end" }, sv), "munkaid\u0151 v\xE9ge (16:30)"]
+    ]);
+    drawTimeline(c1, m, W, now);
+    const c2 = htmlEl("section", "tm-card", null, host);
+    htmlEl("h3", "", "\xC1tfut\xE1si id\u0151 \xE9s t\xE9nyleges r\xE1ford\xEDt\xE1s", c2);
+    htmlEl("p", "cap", "Az \xE1tfut\xE1si id\u0151 a l\xE9trehoz\xE1st\xF3l az utols\xF3 lez\xE1r\xE1sig (vagy a mostig) tart, a r\xE1ford\xEDt\xE1s csak a m\xE9rt munka.", c2);
+    legend(c2, [
+      [(sv) => svgEl("rect", { x: 1, y: 3, width: 16, height: 8, rx: 3, class: "tm-ctx" }, sv), "\xE1tfut\xE1si id\u0151"],
+      [(sv) => svgEl("rect", { x: 1, y: 3, width: 16, height: 8, rx: 3, class: "tm-bar" }, sv), "r\xE1ford\xEDt\xE1s (m\xE9rt munka)"]
+    ]);
+    drawLead(c2, m, W);
+    if (m.findings.length) {
+      const c3 = htmlEl("section", "tm-card", null, host);
+      htmlEl("h3", "", "Mit l\xE1tunk", c3);
+      drawFindings(c3, m);
+    }
+  }
 
   // src/dash.js
   function urgency(now = Date.now()) {
@@ -1561,15 +2006,15 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     });
     return s + "</svg>";
   }
-  function monthChart(stats, md, today) {
-    const n = md.days.length, W = 640, H = 168, x0 = 6, slot = (W - 2 * x0) / n, bw = Math.max(6, slot * 0.68), base = 134, hmax = 104;
-    const max = Math.max(3, ...md.days.map((d) => stats.per[d].total));
+  function monthChart(stats, md3, today) {
+    const n = md3.days.length, W = 640, H = 168, x0 = 6, slot = (W - 2 * x0) / n, bw = Math.max(6, slot * 0.68), base = 134, hmax = 104;
+    const max = Math.max(3, ...md3.days.map((d) => stats.per[d].total));
     let s = `<svg viewBox="0 0 ${W} ${H}" class="chart" role="img" aria-label="Havi feladatok napokra bontva">`;
     for (const l of [0, 0.5, 1]) {
       s += `<line x1="0" x2="${W}" y1="${base - hmax * l}" y2="${base - hmax * l}" stroke="rgba(53,224,255,${l ? 0.1 : 0.3})" stroke-dasharray="${l ? "2 4" : "0"}"/>`;
       if (l) s += `<text x="${W}" y="${base - hmax * l - 3}" text-anchor="end" style="font-size:9px;fill:rgba(127,155,174,.7)">${Math.round(max * l)}</text>`;
     }
-    md.days.forEach((d, i) => {
+    md3.days.forEach((d, i) => {
       const p = stats.per[d], x = x0 + i * slot + (slot - bw) / 2, hd = hmax * p.done / max, ho = hmax * p.open / max, isT = d === today;
       const [yy, mm, dd] = d.split("-").map(Number), wdn = new Date(yy, mm - 1, dd).getDay(), we = wdn === 0 || wdn === 6;
       s += `<g><title>${d}: ${p.total} t\xE9tel (${p.done} k\xE9sz, ${p.open} nyitott)${p.workMs ? " \xB7 m\xE9rt id\u0151: " + fmtWork(p.workMs) : ""}</title>`;
@@ -1583,12 +2028,12 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     });
     return s + "</svg>";
   }
-  function heatCal(stats, md, today) {
-    const cell = 27, gap = 4, step = cell + gap, lead = (md.first.getDay() + 6) % 7, rows = Math.ceil((lead + md.days.length) / 7);
-    const W = 7 * step - gap, H = 14 + rows * step - gap, max = Math.max(1, ...md.days.map((d) => stats.per[d].total));
+  function heatCal(stats, md3, today) {
+    const cell = 27, gap = 4, step = cell + gap, lead = (md3.first.getDay() + 6) % 7, rows = Math.ceil((lead + md3.days.length) / 7);
+    const W = 7 * step - gap, H = 14 + rows * step - gap, max = Math.max(1, ...md3.days.map((d) => stats.per[d].total));
     let s = `<svg viewBox="0 0 ${W} ${H}" class="chart" style="width:${W}px;max-width:100%" role="img" aria-label="Havi napt\xE1r-h\u0151t\xE9rk\xE9p">`;
     ["H", "K", "Sz", "Cs", "P", "Sz", "V"].forEach((n, i) => s += `<text x="${i * step + cell / 2}" y="9" text-anchor="middle">${n}</text>`);
-    md.days.forEach((d, i) => {
+    md3.days.forEach((d, i) => {
       const k = lead + i, x = k % 7 * step, y = 14 + Math.floor(k / 7) * step, p = stats.per[d];
       s += `<g><title>${d}: ${p.total} t\xE9tel (${p.done} k\xE9sz, ${p.open} nyitott)${p.workMs ? " \xB7 m\xE9rt id\u0151: " + fmtWork(p.workMs) : ""}</title>
       <rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${p.total ? `rgba(53,224,255,${(0.16 + 0.74 * p.total / max).toFixed(2)})` : "rgba(53,224,255,.05)"}" stroke="${d === today ? "#ffc233" : "rgba(53,224,255,.12)"}" stroke-width="${d === today ? 1.6 : 1}"/>
@@ -1658,21 +2103,22 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
     const box = $("#dash");
     $("#dashToggle").textContent = ov.hidden ? "megjelen\xEDt\xE9s" : "elrejt\xE9s";
     box.hidden = ov.hidden;
+    renderTimemap();
     if (ov.hidden) return;
     const now = Date.now(), nd = new Date(now), today = todayStr();
     const cap = capOf(live.gap), wd = weekDays(ov.w, nd), ws = periodStats(st.tasks, wd, now), ww = workStats(st.sessions, st.tasks, wd, now, cap), [wy, wm, wdd] = wd[0].split("-").map(Number);
     for (const d of wd) ws.per[d].workMs = ww.per[d];
-    const legend = '<div class="legend"><span><i class="d"></i>k\xE9sz</span><span><i class="o"></i>nyitott</span></div>';
+    const legend2 = '<div class="legend"><span><i class="d"></i>k\xE9sz</span><span><i class="o"></i>nyitott</span></div>';
     const weekHTML = `<div class="panel"><div class="ph"><span class="cap">H\xE9t \xB7 ${isoWeek(new Date(wy, wm - 1, wdd))}.</span><span class="rng mono">${md2(wd[0])} \u2013 ${md2(wd[6])}</span>${navBtns("w")}</div>
     <div class="ovg ovg-w"><div class="ov-k">${kpiBlock(ws, ww)}</div>
-    <div class="ov-c">${weekChart(ws, wd, today)}${legend}</div>
+    <div class="ov-c">${weekChart(ws, wd, today)}${legend2}</div>
     <div class="ov-t"><div class="tops">${topList("Megb\xEDz\xF3k", ws.who, "who", 5)}${topList("C\xEDmk\xE9k", ws.tags, "tag", 5)}${timeList("M\xE9rt id\u0151 \xB7 feladatok", ww.tasks, "wtask")}${timeList("M\xE9rt id\u0151 \xB7 megb\xEDz\xF3k", ww.who, "who")}</div></div></div></div>`;
     const mdd = monthDays(ov.m, nd), ms = periodStats(st.tasks, mdd.days, now), mw = workStats(st.sessions, st.tasks, mdd.days, now, cap);
     for (const d of mdd.days) ms.per[d].workMs = mw.per[d];
     const monthHTML = `<div class="panel"><div class="ph"><span class="cap">H\xF3nap</span><span class="rng mono">${mdd.first.toLocaleDateString("hu-HU", { year: "numeric", month: "long" })}</span>${navBtns("m")}</div>
     <div class="ovg ovg-m"><div class="ov-k">${kpiBlock(ms, mw)}</div>
     <div class="ov-h">${heatCal(ms, mdd, today)}</div>
-    <div class="ov-c">${monthChart(ms, mdd, today)}${legend}</div>
+    <div class="ov-c">${monthChart(ms, mdd, today)}${legend2}</div>
     <div class="ov-t"><div class="tops">${topList("Megb\xEDz\xF3k", ms.who, "who", 5)}${topList("C\xEDmk\xE9k", ms.tags, "tag", 5)}${timeList("M\xE9rt id\u0151 \xB7 feladatok", mw.tasks, "wtask")}${timeList("M\xE9rt id\u0151 \xB7 megb\xEDz\xF3k", mw.who, "who")}</div></div></div></div>`;
     box.innerHTML = weekHTML + monthHTML;
   }
@@ -2461,7 +2907,7 @@ A(z) ${mine.length} feladat a(z) \u201E${other.nev}\u201D al\xE1 ker\xFCl.`)) re
         if (cur !== null) html += "</ul></section>";
         cur = t.datum;
         const op = isOpen(cur), nOpen = cnt[cur] - (dn[cur] || 0);
-        html += `<section class="day${cur === today ? " is-today" : ""}${op ? "" : " collapsed"}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? "\xD6sszecsuk\xE1s" : "Kinyit\xE1s"}"><span class="chev">\u25BE</span>${esc(dayLabel(cur))}</button><small>${dn[cur] || 0}/${cnt[cur]} k\xE9sz${!op && nOpen ? ` \xB7 <b>${nOpen} nyitott</b>` : ""}</small></h2><ul>`;
+        html += `<section class="day${cur === today ? " is-today" : ""}${op ? "" : " collapsed"}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? "\xD6sszecsuk\xE1s" : "Kinyit\xE1s"}"><span class="chev">\u25BE</span>${esc(dayLabel2(cur))}</button><small>${dn[cur] || 0}/${cnt[cur]} k\xE9sz${!op && nOpen ? ` \xB7 <b>${nOpen} nyitott</b>` : ""}</small></h2><ul>`;
       }
       html += taskRows(t, terms, now, wm);
     }

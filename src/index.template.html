@@ -94,6 +94,11 @@
   <section id="overview" class="overview">
   <div class="dash-bar"><span class="cap">Áttekintés</span><span class="line"></span><button type="button" class="mini" id="pplToggle">megbízók</button><button type="button" class="mini" id="dashToggle">elrejtés</button></div>
   <section id="dash" class="dash"></section>
+  <section id="tmap" class="panel tmap" aria-label="Munkaidő-térkép">
+    <div class="ph"><span class="cap">Munkaidő-térkép · mért munka a Hét panel hetén</span><span class="rng mono" id="tmRange"></span><button type="button" class="mini" id="tmTv" aria-pressed="false">táblázat nézet</button></div>
+    <div id="tmBody"></div>
+    <div class="tm-tip" id="tmTip" role="status"></div>
+  </section>
   <section id="people" class="panel people" hidden>
     <div class="ph"><span class="cap">Megbízók · kitől hány feladat jött</span>
       <span class="seg pseg" id="pplPeriod"><button type="button" data-p="w">Hét</button><button type="button" data-p="m">Hónap</button><button type="button" data-p="all" aria-pressed="true">Összes</button></span>

@@ -3,6 +3,7 @@ import { $, esc, isDone, live, ov, st } from './state.js';
 import { liveBar, nextRow, nextTasks, todayWorkMs } from './livedesk.js';
 import { periodStats, workStats } from './stats.js';
 import { dueInfo, isParked } from './tasks.js';
+import { renderTimemap } from './timemap.js';
 import { fmtDur, isoWeek, monthDays, todayStr, weekDays } from './util.js';
 import { activeOf, capOf, fmtWork } from './worktime.js';
 
@@ -159,7 +160,7 @@ export function renderToday(){
 export function renderDash(){
   renderToday();
   const box = $('#dash'); $('#dashToggle').textContent = ov.hidden ? 'megjelenítés' : 'elrejtés';
-  box.hidden = ov.hidden; if (ov.hidden) return;
+  box.hidden = ov.hidden; renderTimemap(); if (ov.hidden) return;
   const now = Date.now(), nd = new Date(now), today = todayStr();
 
   /* HÉT */

@@ -147,3 +147,5 @@ export function mergeSessions(target, incoming){
 const p2 = n => String(n).padStart(2, '0');
 export const fmtHMS = ms => { const t = Math.max(0, Math.floor(ms / 1000)); return `${p2(Math.floor(t / 3600))}:${p2(Math.floor(t / 60) % 60)}:${p2(t % 60)}`; };
 export const fmtWork = ms => { const m = Math.round(Math.max(0, ms) / 60000); return m < 60 ? `${m} p` : `${Math.floor(m / 60)} ó ${p2(m % 60)} p`; };
+// átfutási idő: két napnál hosszabbat napokban mutatjuk (a ráfordítás mellett az óra-perc nem lenne áttekinthető)
+export const fmtLead = ms => { const m = Math.round(Math.max(0, ms) / 60000); return m < 48 * 60 ? fmtWork(ms) : `${Math.floor(m / 1440)} n ${Math.floor(m % 1440 / 60)} ó`; };

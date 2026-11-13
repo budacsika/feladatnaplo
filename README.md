@@ -67,6 +67,13 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 - Kész feladaton a sorban látszik a ráfordított idő (az összes munkamenet összege, ha legalább fél perc); az egér fölé víve a munkamenetek száma is.
 - Nem kötelező: időmérés nélkül a program a korábbiak szerint működik; régi CSV-k változtatás nélkül használhatók.
 
+**Munkaidő-térkép (az Áttekintés alján)**
+- A Hét panelen kiválasztott hét mért munkája egy helyen: négy mutató (mért idő, átlagos munkamenet, feladatok, ráfordítás kész feladatonként), napi idővonal, az átfutási idő és a ráfordítás egymás mellett, és néhány, az adatból számolt megállapítás.
+- **Idővonal**: egy sor egy feladat, egy sáv egy munkamenet, 08:00–17:00 tengelyen; jelölve a létrehozás, a lezárás, az újranyitás, a „most" és a 16:30. Az éjfélen átnyúló munkamenet a két napra oszlik. Az egér fölé víve (vagy billentyűvel ráfókuszálva) a pontos idők és a lezárás oka látszik.
+- **Átfutási idő és ráfordítás**: a két érték külön sáv, jobb szélen a ráfordítás aránya. Az átfutási idő a létrehozástól az utolsó lezárásig (nyitott feladatnál a mostig) tart, a ráfordítás csak a mért munka; kettőt sosem keverünk. A hosszú átfutás napban látszik. Egy diagramon legfeljebb a 8 leghosszabb átfutású feladat jelenik meg, a táblázat nézetben mind.
+- **Táblázat nézet** gombbal ugyanezek az adatok táblázatként (akadálymentes párja a diagramnak). A térkép a Hét panel nyilaival együtt lapoz, és az Áttekintés elrejtésekor eltűnik; nyomtatásba nem kerül.
+- A mért idő számítása azonos a Hét panelével (`workStats`), a térkép csak a megjelenítést adja hozzá (`timeMapModel` a `src/stats.js`-ben, rajzolás a `src/timemap.js`-ben).
+
 **Keresés és szűrés**
 - Élő, ékezet- és kisbetű-független keresés; `#címke` és `@megbízó` is használható
 - Állapot- és időszakszűrő; nyomtatás / PDF az aktuális szűrés szerint
@@ -131,7 +138,7 @@ npm run test:ui   # csak a böngészős teszt
 
 - `tests/pure.test.js`: CSV beolvasás/kiírás és migráció, dátum- és időellenőrzés, határidő-állapotok, heti/havi statisztika, rendezés, megbízók (egyezés, javaslat, összefésülés), Tároló, előzmények (változás-észlelés, CSV, egyesítés, leírások, idővonal, napi napló).
 - `tests/worktime.test.js`: a munkamenet-modell (indítás, szünet, váltás, kész, újranyitás, több munkamenet összege, éjfél, nyári/téli időszámítás-váltás, alvás- és óraugrás-észlelés, CSV, hibás/hiányzó/két aktív sor, egyesítés) és a mért idő statisztika, rögzített időzónában és vezérelt órával.
-- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, előzményeket és a napi naplót, a Live Desket (indítás, váltás, szünet, kész, frissítés utáni helyreállás, alvás és óraugrás vezérelt órával, statisztika), nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
+- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, előzményeket és a napi naplót, a Live Desket (indítás, váltás, szünet, kész, frissítés utáni helyreállás, alvás és óraugrás vezérelt órával, statisztika, munkaidő-térkép), nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
 - A UI-teszt Chrome-ot keres a szokásos helyeken; ha máshol van, add meg a `CHROME_PATH` környezeti változóval.
 
 Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verziókezelésbe.
@@ -140,6 +147,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.10.0 | Munkaidő-térkép az Áttekintés alján: idővonal, átfutási idő és ráfordítás egymás mellett, megállapítások, táblázat nézet |
 | 2.9.4 | Az élő munka sávjában a határidő- és megbízó-chip függőlegesen középre igazítva |
 | 2.9.3 | Kész feladatokon látszik a ráfordított (mért) idő, ha van adat |
 | 2.9.2 | Alapból nyitva marad minden nap, amelyben van megoldatlan feladat; „Ma 16:30” gyorsgomb; kompakt heti/havi áttekintő (egysoros mutatósáv, 2×2 toplista) |

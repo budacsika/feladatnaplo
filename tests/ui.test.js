@@ -585,8 +585,33 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
     assert.strictEqual(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, `${w}px: nincs vízszintes görgetés`);
     assert.strictEqual(await page.$$eval('#dash .kv', els => els.every(e => e.getBoundingClientRect().height < 30)), true, `${w}px: a mutatók értéke egy sorban marad`);
     await (await page.$('#dash')).screenshot({ path: path.resolve(OUT, name) });
+    assert.strictEqual(await page.evaluate(() => { const r = document.querySelector('#tmap').getBoundingClientRect(); return [...document.querySelectorAll('#tmBody svg')].every(s => s.getBoundingClientRect().right <= r.right + 1); }), true, `${w}px: a térkép diagramjai nem lógnak ki`);
+    await (await page.$('#tmap')).screenshot({ path: path.resolve(OUT, 'shot-tmap-' + w + '.png') });
   }
   await page.setViewport({ width: 1280, height: 1000 }); await sleep(250);
+
+  // 15c) munkaidő-térkép az Áttekintés alján (a Hét panel hetére, a mért munkamenetekből)
+  assert.strictEqual(await page.$eval('#tmap', e => !e.hidden), true, 'a térkép látszik');
+  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '11.09. – 11.15.', 'a Hét panel hetét mutatja');
+  assert.strictEqual(await page.$$eval('#tmBody .tm-tile', e => e.length), 4, 'négy mutató');
+  assert(await page.$$eval('#tmBody rect.tm-bar.m', e => e.length) >= 2, 'a munkamenetek sávként látszanak');
+  assert.strictEqual(await page.$$eval('#tmBody .tm-card h3', e => e.map(x => x.textContent)).then(a => a.slice(0, 2).join('|')), 'Mikor és mire ment el a munkaidő?|Átfutási idő és tényleges ráfordítás');
+  const tmTotal = await page.$eval('#tmBody .tm-tile .v', e => e.textContent), kpiTotal = await page.$$eval('#dash .kpi', ks => { const k = ks.find(x => /mért idő/i.test(x.querySelector('.cap').textContent)); return k ? k.querySelector('.kv').textContent.trim() : null; });
+  assert.strictEqual(tmTotal, kpiTotal, `a térkép és a Hét panel ugyanazt a mért időt mutatja: ${tmTotal} / ${kpiTotal}`);
+  await page.hover('#tmBody rect.tm-bar.m'); await sleep(150);
+  assert.strictEqual(await page.$eval('#tmTip', e => e.classList.contains('on') && /lezárás oka|folyamatban/.test(e.textContent)), true, 'a sáv fölött tooltip jelenik meg');
+  await page.mouse.move(2, 2); await sleep(100);
+  await page.click('#tmTv'); await sleep(100);
+  assert.strictEqual(await page.evaluate(() => [document.querySelectorAll('#tmBody table').length, document.querySelectorAll('#tmBody svg').length]).then(a => a.join()), '3,0', 'táblázat nézet: három táblázat, diagram nélkül');
+  await page.click('#tmTv'); await sleep(100);
+  assert(await page.$$eval('#tmBody svg', e => e.length) >= 2, 'visszaváltás a diagramra');
+  await page.click('#dash [data-nav="w"][data-d="1"]'); await sleep(100);
+  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '11.16. – 11.22.', 'a hétváltás a térképet is követi');
+  assert(/nincs mért munkamenet/.test(await page.$eval('#tmBody', e => e.textContent)), 'üres hét: magyarázó szöveg');
+  await page.click('#dash [data-nav="w"][data-d="0"]'); await sleep(100);
+  await page.click('#dashToggle'); assert.strictEqual(await page.$eval('#tmap', e => e.hidden), true, 'az áttekintés elrejtésével a térkép is eltűnik');
+  await page.click('#dashToggle'); assert.strictEqual(await page.$eval('#tmap', e => !e.hidden), true); assert(await page.$$eval('#tmBody svg', e => e.length) >= 2, 'újra látszik, diagrammal');
+  await (await page.$('#tmap')).screenshot({ path: path.resolve(OUT, 'shot-tmap.png') });
 
   // 16) Sérült munkamenet-fájl és külső írás: a program javít, másolatot készít, és egyesít
   await page.click('#today [data-live="pause"]').catch(() => {});

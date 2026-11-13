@@ -56,6 +56,9 @@ export const fmtAgo = ms => { const m = Math.floor(ms/60000); if (m < 1) return 
 export const fmtDur = ms => ms < 3600e3 ? `${Math.max(1,Math.round(ms/60000))} p` : ms < 48*3600e3 ? `${(ms/3600e3).toFixed(1).replace('.',',')} ó` : `${(ms/86400e3).toFixed(1).replace('.',',')} n`;
 
 /* --- időszakok és statisztika --- */
+export const WDN = ['vasárnap','hétfő','kedd','szerda','csütörtök','péntek','szombat'];
+export const MON = ['jan.','febr.','márc.','ápr.','máj.','jún.','júl.','aug.','szept.','okt.','nov.','dec.'];
+export const dayLabel = ds => { const [y, m, d] = ds.split('-').map(Number); return `${WDN[new Date(y, m-1, d).getDay()]} · ${MON[m-1]} ${d}.`; };   // pl. „péntek · nov. 13."
 export function weekDays(offset = 0, now = new Date()){
   const d = new Date(now.getFullYear(), now.getMonth(), now.getDate()); d.setDate(d.getDate() - ((d.getDay()+6)%7) + offset*7);
   return Array.from({length:7}, (_,i) => { const x = new Date(d); x.setDate(d.getDate()+i); return dstr(x); });
