@@ -251,6 +251,18 @@ assert.strictEqual(normalizeActive([mk('1', 'a', '2026-11-09T09:00:00')]), 0);
   assert.strictEqual(mr.days[0].rows[0].segs[0].run, true); assert.strictEqual(mr.tiles.totalMs, 45 * MIN); assert(mr.findings.join('').includes('a mai nap még fut'));
   const sh = timeMapModel([Object.assign(mk('s', 'b', '2026-11-09T09:00:00'), { veg: '2026-11-09T09:05:00', idotartam_mp: '300', ok: 'szunet' })], tasks, hist, days, now);
   assert(sh.findings[0].map(p => typeof p === 'string' ? p : p.b).join('') === 'Egyik munkamenet sem érte el a 45 percet; a 1 munkamenetből 1 rövidebb 10 percnél.', 'nincs hosszú blokk: nem írunk 0%-ot');
+  // összesített (nem részletes) nézet: nincs sor-bontás, de van napi sávsor, óránkénti eloszlás és saját megállapítások
+  const ag = timeMapModel(S, tasks, hist, days, now, Infinity, false);
+  assert.deepStrictEqual(ag.days.map(d => [d.day, d.w / MIN, d.nTasks, d.rows.length]), [['2026-11-09', 100, 2, 0], ['2026-11-10', 30, 1, 0], ['2026-11-11', 30, 1, 0]]);
+  assert.deepStrictEqual(ag.bars.map(b => [b.ms / MIN, b.mdays, b.tasks]), [[100, 1, 2], [30, 1, 1], [30, 1, 1], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]], 'napi sávok, a mérés nélküli napok is');
+  assert.strictEqual(ag.hours.length, 24); assert.deepStrictEqual([ag.hours[9] / MIN, ag.hours[10] / MIN, ag.hours[23] / MIN, ag.hours[0] / MIN], [60, 40, 30, 30], 'óránkénti eloszlás (az óra határán szétvágva)');
+  assert.strictEqual(ag.hours.reduce((x, v) => x + v, 0), ag.tiles.totalMs, 'az óránkénti eloszlás összege a mért idő');
+  const agText = ag.findings.map(f => f.map(p => typeof p === 'string' ? p : p.b).join('')).join('\n');
+  assert(agText.includes('A legtöbb mért munka hétfő · nov. 9. napra esett (1 ó 40 p); a 3 mért napon átlagosan 53 p / nap.') && agText.includes('09:00–10:00 között esik (a mért idő 38%-a)') && !agText.includes('hétfő 91%'), agText);
+  // hosszú időszak: heti összegek hétfőtől (a sávok száma nem nő a végtelenségig)
+  const long = []; for (let i = 0; i < 70; i++) { const d = new Date(2026, 8, 7 + i); long.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`); }
+  const lg = timeMapModel([Object.assign(mk('w1', 'a', '2026-09-08T09:00:00'), { veg: '2026-09-08T10:00:00', idotartam_mp: '3600', ok: 'szunet' }), Object.assign(mk('w2', 'a', '2026-09-20T09:00:00'), { veg: '2026-09-20T09:30:00', idotartam_mp: '1800', ok: 'szunet' })], tasks, [], long, now, Infinity, false);
+  assert.strictEqual(lg.bars.length, 10, '70 nap = 10 heti sáv'); assert.deepStrictEqual([lg.bars[0].from, lg.bars[0].to, lg.bars[0].ms / MIN, lg.bars[0].mdays, lg.bars[1].ms / MIN], ['2026-09-07', '2026-09-13', 60, 1, 30]);
   const empty = timeMapModel([], tasks, hist, days, now);
   assert.deepStrictEqual([empty.days.length, empty.lead.length, empty.findings.length, empty.tiles.totalMs, empty.tiles.avgTaskMs], [0, 0, 0, 0, null]);
   // törölt feladat és hiányzó létrehozási idő: nem omlik össze, az átfutási sorból kimarad

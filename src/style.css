@@ -387,7 +387,8 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .tmap[hidden]{display:none}
 .tmap .ph{flex-wrap:wrap}
 .tmap .ph .rng{white-space:nowrap}
-.tmap .ph .mini{margin-left:auto}
+.tmap .ph .nav[hidden]{display:none}
+.tmap #tmTv{margin-left:6px}
 .tm-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:2px 0 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .tm-tile{padding:9px 14px;border-left:1px solid var(--line);min-width:0}
 .tm-tile:first-child{padding-left:0;border-left:0}

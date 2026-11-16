@@ -68,11 +68,12 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 - Nem kötelező: időmérés nélkül a program a korábbiak szerint működik; régi CSV-k változtatás nélkül használhatók.
 
 **Munkaidő-térkép (az Áttekintés alján)**
-- A Hét panelen kiválasztott hét mért munkája egy helyen: négy mutató (mért idő, átlagos munkamenet, feladatok, ráfordítás kész feladatonként), napi idővonal, az átfutási idő és a ráfordítás egymás mellett, és néhány, az adatból számolt megállapítás.
-- **Idővonal**: egy sor egy feladat, egy sáv egy munkamenet, 08:00–17:00 tengelyen; jelölve a létrehozás, a lezárás, az újranyitás, a „most" és a 16:30. Az éjfélen átnyúló munkamenet a két napra oszlik. Az egér fölé víve (vagy billentyűvel ráfókuszálva) a pontos idők és a lezárás oka látszik.
+- A mért munka összesítve, saját időszak-választóval: **Hónap** (alapnézet, ‹ ● › gombokkal lapozható), **Hét** és **Összes** (az első mért naptól mostanáig). Az utolsó választott nézet megmarad. Négy mutató: mért idő, átlagos munkamenet, feladatok, ráfordítás kész feladatonként.
+- **Hónap és Összes**: napi mért idő oszlopdiagramon (62 napnál hosszabb időszaknál heti összegek), a mért idő a nap óráira elosztva („mikor dolgozom"), az átfutási idő és a ráfordítás egymás mellett, és néhány, az adatból számolt megállapítás.
+- **Hét**: napi idővonal. Egy sor egy feladat, egy sáv egy munkamenet, 08:00–17:00 tengelyen; jelölve a létrehozás, a lezárás, az újranyitás, a „most" és a 16:30. Az éjfélen átnyúló munkamenet a két napra oszlik. Az egér fölé víve (vagy billentyűvel ráfókuszálva) a pontos idők és a lezárás oka látszik.
 - **Átfutási idő és ráfordítás**: a két érték külön sáv, jobb szélen a ráfordítás aránya. Az átfutási idő a létrehozástól az utolsó lezárásig (nyitott feladatnál a mostig) tart, a ráfordítás csak a mért munka; kettőt sosem keverünk. A hosszú átfutás napban látszik. Egy diagramon legfeljebb a 8 leghosszabb átfutású feladat jelenik meg, a táblázat nézetben mind.
-- **Táblázat nézet** gombbal ugyanezek az adatok táblázatként (akadálymentes párja a diagramnak). A térkép a Hét panel nyilaival együtt lapoz, és az Áttekintés elrejtésekor eltűnik; nyomtatásba nem kerül.
-- A mért idő számítása azonos a Hét panelével (`workStats`), a térkép csak a megjelenítést adja hozzá (`timeMapModel` a `src/stats.js`-ben, rajzolás a `src/timemap.js`-ben).
+- **Táblázat nézet** gombbal ugyanezek az adatok táblázatként (akadálymentes párja a diagramnak). A térkép az Áttekintés elrejtésekor eltűnik; nyomtatásba nem kerül.
+- A mért idő számítása azonos a Hét és Hónap panelével (`workStats`), a térkép csak a megjelenítést adja hozzá (`timeMapModel` a `src/stats.js`-ben, rajzolás a `src/timemap.js`-ben).
 
 **Keresés és szűrés**
 - Élő, ékezet- és kisbetű-független keresés; `#címke` és `@megbízó` is használható
@@ -147,6 +148,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.11.0 | A munkaidő-térkép összesített nézetei: Hónap (lapozható), Hét és Összes; napi mért idő és óránkénti eloszlás |
 | 2.10.0 | Munkaidő-térkép az Áttekintés alján: idővonal, átfutási idő és ráfordítás egymás mellett, megállapítások, táblázat nézet |
 | 2.9.4 | Az élő munka sávjában a határidő- és megbízó-chip függőlegesen középre igazítva |
 | 2.9.3 | Kész feladatokon látszik a ráfordított (mért) idő, ha van adat |

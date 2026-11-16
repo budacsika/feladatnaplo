@@ -590,28 +590,50 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   }
   await page.setViewport({ width: 1280, height: 1000 }); await sleep(250);
 
-  // 15c) munkaidő-térkép az Áttekintés alján (a Hét panel hetére, a mért munkamenetekből)
+  // 15c) munkaidő-térkép az Áttekintés alján: alapból havi nézet; Hét / Hónap / Összes között váltható, saját lapozással
+  const tmTitles = () => page.$$eval('#tmBody .tm-card h3', e => e.map(x => x.textContent));
+  const tmKpi = which => page.$$eval('#dash .kpi', (ks, w) => { const k = ks.filter(x => /mért idő/i.test(x.querySelector('.cap').textContent)); const x = w === 'last' ? k[k.length - 1] : k[0]; return x ? x.querySelector('.kv').textContent.trim() : null; }, which);
   assert.strictEqual(await page.$eval('#tmap', e => !e.hidden), true, 'a térkép látszik');
-  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '11.09. – 11.15.', 'a Hét panel hetét mutatja');
+  assert.strictEqual(await page.$eval('#tmMode [aria-pressed=true]', e => e.dataset.m), 'm', 'alapnézet: hónap');
+  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '2026. november', 'a havi nézet a hónapot mutatja');
   assert.strictEqual(await page.$$eval('#tmBody .tm-tile', e => e.length), 4, 'négy mutató');
-  assert(await page.$$eval('#tmBody rect.tm-bar.m', e => e.length) >= 2, 'a munkamenetek sávként látszanak');
-  assert.strictEqual(await page.$$eval('#tmBody .tm-card h3', e => e.map(x => x.textContent)).then(a => a.slice(0, 2).join('|')), 'Mikor és mire ment el a munkaidő?|Átfutási idő és tényleges ráfordítás');
-  const tmTotal = await page.$eval('#tmBody .tm-tile .v', e => e.textContent), kpiTotal = await page.$$eval('#dash .kpi', ks => { const k = ks.find(x => /mért idő/i.test(x.querySelector('.cap').textContent)); return k ? k.querySelector('.kv').textContent.trim() : null; });
-  assert.strictEqual(tmTotal, kpiTotal, `a térkép és a Hét panel ugyanazt a mért időt mutatja: ${tmTotal} / ${kpiTotal}`);
+  assert.deepStrictEqual((await tmTitles()).slice(0, 3), ['Mennyit dolgoztam naponta?', 'Mikor dolgozom a nap folyamán?', 'Átfutási idő és tényleges ráfordítás'], 'havi nézet: napi sávok, óránkénti eloszlás, átfutási idő');
+  assert(await page.$$eval('#tmBody rect.tm-bar.m', e => e.length) >= 2, 'a napi és az órás sávok látszanak');
+  assert.strictEqual(await page.$eval('#tmBody .tm-tile .v', e => e.textContent), await tmKpi('last'), 'a havi térkép és a Hónap panel ugyanazt a mért időt mutatja');
   await page.hover('#tmBody rect.tm-bar.m'); await sleep(150);
-  assert.strictEqual(await page.$eval('#tmTip', e => e.classList.contains('on') && /lezárás oka|folyamatban/.test(e.textContent)), true, 'a sáv fölött tooltip jelenik meg');
+  assert.strictEqual(await page.$eval('#tmTip', e => e.classList.contains('on') && e.textContent.length > 5), true, 'a sáv fölött tooltip jelenik meg');
   await page.mouse.move(2, 2); await sleep(100);
+  await (await page.$('#tmap')).screenshot({ path: path.resolve(OUT, 'shot-tmap-month.png') });
+  await page.click('#tmNav [data-d="-1"]'); await sleep(100);
+  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '2026. október', 'hónaplapozás');
+  assert(/nincs mért munkamenet/.test(await page.$eval('#tmBody', e => e.textContent)), 'üres hónap: magyarázó szöveg');
+  await page.click('#tmNav [data-d="0"]'); await sleep(100);
+  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '2026. november', 'a ● az aktuális hónapra ugrik');
   await page.click('#tmTv'); await sleep(100);
-  assert.strictEqual(await page.evaluate(() => [document.querySelectorAll('#tmBody table').length, document.querySelectorAll('#tmBody svg').length]).then(a => a.join()), '3,0', 'táblázat nézet: három táblázat, diagram nélkül');
+  assert.deepStrictEqual(await page.evaluate(() => [document.querySelectorAll('#tmBody table').length, document.querySelectorAll('#tmBody svg').length]), [3, 0], 'havi táblázat nézet: három táblázat, diagram nélkül');
   await page.click('#tmTv'); await sleep(100);
-  assert(await page.$$eval('#tmBody svg', e => e.length) >= 2, 'visszaváltás a diagramra');
-  await page.click('#dash [data-nav="w"][data-d="1"]'); await sleep(100);
-  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '11.16. – 11.22.', 'a hétváltás a térképet is követi');
+  await page.click('#tmMode [data-m="all"]'); await sleep(100);
+  assert.strictEqual(await page.$eval('#tmNav', e => e.hidden), true, 'összesített nézetben nincs lapozás');
+  assert(/^2026\.11\.\d\d\. – 2026\.11\.\d\d\.$/.test(await page.$eval('#tmRange', e => e.textContent)), 'összesítés: az első mért naptól mostanáig');
+  assert.strictEqual((await tmTitles())[0], 'Mennyit dolgoztam naponta?');
+  await page.click('#tmMode [data-m="w"]'); await sleep(100);
+  assert.strictEqual(await page.$eval('#tmNav', e => e.hidden), false);
+  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '11.09. – 11.15.', 'heti nézet a hetet mutatja');
+  assert.strictEqual((await tmTitles())[0], 'Mikor és mire ment el a munkaidő?', 'heti nézet: napi idővonal');
+  assert(await page.$$eval('#tmBody rect.tm-bar.m', e => e.length) >= 2, 'a munkamenetek sávként látszanak');
+  assert.strictEqual(await page.$eval('#tmBody .tm-tile .v', e => e.textContent), await tmKpi('first'), 'a heti térkép és a Hét panel ugyanazt a mért időt mutatja');
+  await page.click('#tmTv'); await sleep(100);
+  assert.deepStrictEqual(await page.evaluate(() => [document.querySelectorAll('#tmBody table').length, document.querySelectorAll('#tmBody svg').length]), [3, 0], 'heti táblázat nézet');
+  await page.click('#tmTv'); await sleep(100);
+  await page.click('#tmNav [data-d="1"]'); await sleep(100);
+  assert.strictEqual(await page.$eval('#tmRange', e => e.textContent), '11.16. – 11.22.', 'hétlapozás');
   assert(/nincs mért munkamenet/.test(await page.$eval('#tmBody', e => e.textContent)), 'üres hét: magyarázó szöveg');
-  await page.click('#dash [data-nav="w"][data-d="0"]'); await sleep(100);
+  await page.click('#tmNav [data-d="0"]'); await sleep(100);
+  await (await page.$('#tmap')).screenshot({ path: path.resolve(OUT, 'shot-tmap.png') });
+  assert.strictEqual(await page.evaluate(() => localStorage.getItem('feladatnaplo.tmap')), 'w', 'az utolsó nézet megmarad');
   await page.click('#dashToggle'); assert.strictEqual(await page.$eval('#tmap', e => e.hidden), true, 'az áttekintés elrejtésével a térkép is eltűnik');
   await page.click('#dashToggle'); assert.strictEqual(await page.$eval('#tmap', e => !e.hidden), true); assert(await page.$$eval('#tmBody svg', e => e.length) >= 2, 'újra látszik, diagrammal');
-  await (await page.$('#tmap')).screenshot({ path: path.resolve(OUT, 'shot-tmap.png') });
+  await page.click('#tmMode [data-m="m"]'); await sleep(100);
 
   // 16) Sérült munkamenet-fájl és külső írás: a program javít, másolatot készít, és egyesít
   await page.click('#today [data-live="pause"]').catch(() => {});

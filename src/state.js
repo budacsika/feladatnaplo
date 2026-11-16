@@ -5,7 +5,7 @@ export const VERSION = typeof __VERSION__ === 'string' ? __VERSION__ : 'dev';   
 /* ---------- állapot ---------- */
 export const FILE_NAME = 'feladatnaplo.csv', BACKUP_DIR = 'mentesek', BACKUP_KEEP = 60;
 
-export const DB_NAME = 'feladatnaplo-mytask', STORE = 'kv', LS = 'feladatnaplo.v1', LS_OFF = 'feladatnaplo.v1.offline', LS_DASH = 'feladatnaplo.dash', LS_P = 'feladatnaplo.v1.people', LS_PPL = 'feladatnaplo.ppl', LS_PARK = 'feladatnaplo.park', PEOPLE_FILE = 'megbizok.csv', HIST_FILE = 'tortenet.csv', LS_H = 'feladatnaplo.v1.hist', LS_JRN = 'feladatnaplo.journal', SESS_FILE = 'munkamenetek.csv', LS_S = 'feladatnaplo.v1.sessions', LS_HB = 'feladatnaplo.live.hb';
+export const DB_NAME = 'feladatnaplo-mytask', STORE = 'kv', LS = 'feladatnaplo.v1', LS_OFF = 'feladatnaplo.v1.offline', LS_DASH = 'feladatnaplo.dash', LS_P = 'feladatnaplo.v1.people', LS_PPL = 'feladatnaplo.ppl', LS_PARK = 'feladatnaplo.park', PEOPLE_FILE = 'megbizok.csv', HIST_FILE = 'tortenet.csv', LS_H = 'feladatnaplo.v1.hist', LS_JRN = 'feladatnaplo.journal', SESS_FILE = 'munkamenetek.csv', LS_S = 'feladatnaplo.v1.sessions', LS_HB = 'feladatnaplo.live.hb', LS_TM = 'feladatnaplo.tmap';
 
 export const st = { tasks:[], deleted:new Set(), mode:'none', dir:null, fh:null, lastMod:0,
   dirty:false, saving:false, err:null, savedAt:null, editing:null, dateTouched:false, saveTimer:0, retryTimer:0,
@@ -15,7 +15,7 @@ export const st = { tasks:[], deleted:new Set(), mode:'none', dir:null, fh:null,
 
 export const ui = { search:'', status:'all', period:'all', dayState:new Map(), histOpen:new Set() };   // dayState: nap → kézzel nyitott/zárt; alapból csak a mai nap nyitott
 
-export const ov = { w:0, m:0, park: (() => { try { return localStorage.getItem(LS_PARK) !== '0'; } catch { return true; } })(), people: (() => { try { return localStorage.getItem(LS_PPL) === '1'; } catch { return false; } })(), pPeriod:'all', pEdit:null, journal: (() => { try { return localStorage.getItem(LS_JRN) === '1'; } catch { return false; } })(), jDay:'', hidden: (() => { try { return localStorage.getItem(LS_DASH) === '0'; } catch { return false; } })() };
+export const ov = { w:0, m:0, tm: (() => { try { const v = localStorage.getItem(LS_TM); return v === 'w' || v === 'all' ? v : 'm'; } catch { return 'm'; } })(), tmo:0, park: (() => { try { return localStorage.getItem(LS_PARK) !== '0'; } catch { return true; } })(), people: (() => { try { return localStorage.getItem(LS_PPL) === '1'; } catch { return false; } })(), pPeriod:'all', pEdit:null, journal: (() => { try { return localStorage.getItem(LS_JRN) === '1'; } catch { return false; } })(), jDay:'', hidden: (() => { try { return localStorage.getItem(LS_DASH) === '0'; } catch { return false; } })() };
 
 export const $ = s => document.querySelector(s);
 

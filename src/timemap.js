@@ -1,7 +1,7 @@
-// Munkaidő-térkép: a Hét panelen kiválasztott hét munkamenetei idővonalon, az átfutási idő és a ráfordítás egymás mellett (az Áttekintés alján)
+// Munkaidő-térkép (az Áttekintés alján): a mért munka hétre, hónapra vagy az összes időre; hónapnál és összesítésnél napi sávok és óránkénti eloszlás, hétnél napi idővonal; az átfutási idő és a ráfordítás egymás mellett
 import { timeMapModel } from './stats.js';
-import { $, live, ov, st } from './state.js';
-import { dayLabel, pad, weekDays } from './util.js';
+import { $, LS_TM, live, ov, st } from './state.js';
+import { dayLabel, dstr, monthDays, pad, toMs, weekDays } from './util.js';
 import { capOf, fmtLead, fmtWork } from './worktime.js';
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -124,18 +124,75 @@ function drawFindings(host, m){
   m.findings.forEach(parts => { const li = htmlEl('li', '', null, ul); parts.forEach(p => { if (typeof p === 'string') li.appendChild(document.createTextNode(p)); else htmlEl('b', '', p.b, li); }); });
 }
 
+/* ---------- 3) napi mért idő (hónap, összes) ---------- */
+const hourTxt = m => m % 60 === 0 ? (m / 60) + ' ó' : m + ' p';
+function drawDaily(host, m, W){
+  const bars = m.bars, n = bars.length, wk = bars.some(b => b.tasks === null), padL = 38, padR = 6, H = 150, top = 16, bot = 22, pw = W - padL - padR, ph = H - top - bot;
+  const maxMs = Math.max(...bars.map(b => b.ms), 60e3), step = [15, 30, 60, 120, 240, 480, 960].find(v => maxMs / 60e3 / v <= 4) || 960, ymax = Math.ceil(maxMs / 60e3 / step) * step;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': wk ? 'Heti mért idő' : 'Napi mért idő' }); svg.style.height = H + 'px'; host.appendChild(svg);
+  const g0 = svgEl('g', { transform: `translate(0,${top})` }, svg), Y = v => ph - v / (ymax * 60e3) * ph;
+  for (let v = 0; v <= ymax; v += step) { svgEl('line', { x1: padL, x2: W - padR, y1: Y(v * 60e3), y2: Y(v * 60e3), class: 'tm-grid' }, g0); svgEl('text', { x: padL - 6, y: Y(v * 60e3) + 4, 'text-anchor': 'end' }, g0, v ? hourTxt(v) : '0'); }
+  const slot = pw / n, bw = Math.min(26, Math.max(3, slot * .68)), maxLab = Math.max(1, Math.floor(pw / (wk ? 46 : 24))), k = Math.ceil(n / maxLab), top1 = bars.reduce((q, b, i) => b.ms > bars[q].ms ? i : q, 0);
+  bars.forEach((b, i) => {
+    const x = padL + i * slot + (slot - bw) / 2, h = Math.max(0, b.ms / (ymax * 60e3) * ph);
+    if (i % k === 0) svgEl('text', { x: x + bw / 2, y: ph + 15, 'text-anchor': 'middle' }, g0, wk ? md(b.from) : String(+b.from.slice(8)));
+    if (b.ms <= 0) return;
+    const g = svgEl('g', {}, g0); svgEl('rect', { x, y: ph - h, width: bw, height: h, rx: Math.min(3, bw / 2), class: 'm tm-bar' }, g);
+    if (i === top1) svgEl('text', { x: x + bw / 2, y: ph - h - 5, 'text-anchor': 'middle', class: 't0' }, g, fmtWork(b.ms));
+    svgEl('rect', { x: padL + i * slot, y: -top, width: slot, height: ph + top, fill: 'transparent' }, g);
+    hookTip(g, wk ? [fmtWork(b.ms), md(b.from) + ' – ' + md(b.to), b.mdays + ' mért nap'] : [fmtWork(b.ms), dayLabel(b.from), b.tasks + ' feladat']);
+  });
+}
+
+/* ---------- 4) óránkénti eloszlás ---------- */
+function drawHours(host, m, W){
+  const hrs = m.hours, act = hrs.map((v, i) => v > 0 ? i : -1).filter(i => i >= 0), total = hrs.reduce((a, v) => a + v, 0);
+  if (!act.length) return;
+  const lo = Math.min(8, act[0]), hi = Math.max(17, act[act.length - 1] + 1), n = hi - lo, narrow = W < 640, padL = 8, H = 120, top = 16, bot = 22, pw = W - padL - 6, ph = H - top - bot, max = Math.max(...hrs);
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Mért idő a nap óráira elosztva' }); svg.style.height = H + 'px'; host.appendChild(svg);
+  const g0 = svgEl('g', { transform: `translate(0,${top})` }, svg); svgEl('line', { x1: padL, x2: W - 6, y1: ph, y2: ph, class: 'tm-grid' }, g0);
+  const slot = pw / n, bw = Math.min(34, slot * .68), top1 = hrs.indexOf(max);
+  for (let h = lo; h < hi; h++) {
+    const i = h - lo, x = padL + i * slot + (slot - bw) / 2, v = hrs[h], bh = v / max * ph, pc = Math.round(v / total * 100);
+    if (!narrow || i % 2 === 0) svgEl('text', { x: x + bw / 2, y: ph + 15, 'text-anchor': 'middle' }, g0, pad(h));
+    if (v <= 0) continue;
+    const g = svgEl('g', {}, g0); svgEl('rect', { x, y: ph - bh, width: bw, height: bh, rx: Math.min(3, bw / 2), class: 'm tm-bar' }, g);
+    if (h === top1) svgEl('text', { x: x + bw / 2, y: ph - bh - 5, 'text-anchor': 'middle', class: 't0' }, g, pc + '%');
+    svgEl('rect', { x: padL + i * slot, y: -top, width: slot, height: ph + top, fill: 'transparent' }, g);
+    hookTip(g, [fmtWork(v), `${pad(h)}:00–${pad((h + 1) % 24)}:00`, (pc < 1 ? '<1' : pc) + '% a mért időből']);
+  }
+}
+
 /* ---------- táblázat nézet (a diagramok akadálymentes párja) ---------- */
-function drawTables(host, m){
+function drawTables(host, m, detail){
   const mk = (title, head, rows) => {
     htmlEl('h3', '', title, host);
     const t = htmlEl('table', 'tm-table', null, host), tr = htmlEl('tr', '', null, t);
     head.forEach((x, i) => { const th = htmlEl('th', i > 1 ? 'n' : '', x, tr); th.scope = 'col'; });
     rows.forEach(r => { const tr2 = htmlEl('tr', '', null, t); r.forEach((x, i) => htmlEl('td', i > 1 ? 'n' : '', x, tr2)); });
   };
-  const segs = []; m.days.forEach(d => d.rows.forEach(r => r.segs.forEach(s => segs.push([r.name, d.day, hm(s.s0), s.run ? 'folyamatban' : hm(s.s1), fmtWork(s.b - s.a), s.run ? '–' : (OKTXT[s.ok] || s.ok || '–')]))));
-  mk('Munkamenetek', ['Feladat', 'Nap', 'Kezdet', 'Vég', 'Időtartam', 'Lezárás oka'], segs);
+  if (detail) {
+    const segs = []; m.days.forEach(d => d.rows.forEach(r => r.segs.forEach(s => segs.push([r.name, d.day, hm(s.s0), s.run ? 'folyamatban' : hm(s.s1), fmtWork(s.b - s.a), s.run ? '–' : (OKTXT[s.ok] || s.ok || '–')]))));
+    mk('Munkamenetek', ['Feladat', 'Nap', 'Kezdet', 'Vég', 'Időtartam', 'Lezárás oka'], segs);
+  }
   mk('Átfutási idő és ráfordítás', ['Feladat', 'Állapot', 'Átfutási idő', 'Ráfordítás', 'Arány'], m.lead.map(r => { const p = r.work / r.lead * 100; return [r.name, r.done ? 'kész' : 'nyitott', fmtLead(r.lead), fmtWork(r.work), (p > 0 && p < 1 ? '<1' : Math.round(p)) + '%']; }));
-  mk('Napi összesítés', ['Nap', 'Feladat', 'Mért idő', 'Első indítás', 'Utolsó leállítás'], m.days.map(d => [d.day, d.rows.length + ' feladat', fmtWork(d.w), hm(d.a), d.rows.some(r => r.segs.some(g => g.run)) ? 'folyamatban' : hm(d.b)]));
+  mk('Napi összesítés', ['Nap', 'Feladat', 'Mért idő', 'Első indítás', 'Utolsó leállítás'], m.days.map(d => [d.day, d.nTasks + ' feladat', fmtWork(d.w), hm(d.a), d.rows.some(r => r.segs.some(g => g.run)) ? 'folyamatban' : hm(d.b)]));
+  if (!detail) { const tot = m.hours.reduce((x, v) => x + v, 0); mk('Óránkénti eloszlás', ['Óra', 'Mért idő', 'Arány'], m.hours.map((v, h) => [`${pad(h)}:00–${pad((h + 1) % 24)}:00`, v, (tot ? Math.round(v / tot * 100) : 0) + '%']).filter(r => r[1] > 0).map(r => [r[0], fmtWork(r[1]), r[2]])); }
+}
+
+/* ---------- időszak ---------- */
+function allDays(now){
+  let lo = Infinity; for (const s of st.sessions) { const t = toMs(s.kezdet); if (t < lo) lo = t; }
+  const end = new Date(now), out = []; if (!isFinite(lo)) return [dstr(end)];
+  const f = new Date(lo);
+  for (const d = new Date(f.getFullYear(), f.getMonth(), f.getDate()); d <= end; d.setDate(d.getDate() + 1)) out.push(dstr(d));
+  return out;
+}
+function period(now){
+  const nd = new Date(now);
+  if (ov.tm === 'w') { const d = weekDays(ov.tmo, nd); return { days: d, label: md(d[0]) + ' – ' + md(d[6]), detail: true, none: 'Ebben a héten nincs mért munkamenet.' }; }
+  if (ov.tm === 'all') { const d = allDays(now); return { days: d, label: d[0].replace(/-/g, '.') + '. – ' + d[d.length - 1].replace(/-/g, '.') + '.', detail: false, none: 'Még nincs mért munkamenet.' }; }
+  const mm = monthDays(ov.tmo, nd); return { days: mm.days, label: mm.first.toLocaleDateString('hu-HU', { year: 'numeric', month: 'long' }), detail: false, none: 'Ebben a hónapban nincs mért munkamenet.' };
 }
 
 /* ---------- összeállítás ---------- */
@@ -144,31 +201,40 @@ export function renderTimemap(){
   if (!wired) {
     wired = true;
     $('#tmTv').addEventListener('click', () => { tv = !tv; lastKey = ''; renderTimemap(); });
+    $('#tmMode').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; ov.tm = b.dataset.m; ov.tmo = 0; try { localStorage.setItem(LS_TM, ov.tm); } catch {} renderTimemap(); });
+    $('#tmNav').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; const d = +b.dataset.d; ov.tmo = d === 0 ? 0 : ov.tmo + d; renderTimemap(); });
     if (typeof ResizeObserver === 'function') new ResizeObserver(() => { clearTimeout(rt); rt = setTimeout(renderTimemap, 80); }).observe(box);
   }
-  const host = $('#tmBody'), W = Math.max(280, Math.floor(host.clientWidth) || 900), now = Date.now(), wd = weekDays(ov.w, new Date(now));
-  const m = timeMapModel(st.sessions, st.tasks, st.hist, wd, now, capOf(live.gap));
-  $('#tmRange').textContent = md(wd[0]) + ' – ' + md(wd[6]);
+  const host = $('#tmBody'), W = Math.max(280, Math.floor(host.clientWidth) || 900), now = Date.now(), pr = period(now);
+  const m = timeMapModel(st.sessions, st.tasks, st.hist, pr.days, now, capOf(live.gap), pr.detail);
+  $('#tmRange').textContent = pr.label; $('#tmNav').hidden = ov.tm === 'all';
+  $('#tmMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === ov.tm)));
   $('#tmTv').textContent = tv ? 'diagram nézet' : 'táblázat nézet'; $('#tmTv').setAttribute('aria-pressed', String(tv));
-  const key = JSON.stringify([m, tv, W]);
+  const key = JSON.stringify([m, tv, W, ov.tm, pr.label]);
   if (key === lastKey) return;                    // változatlan adat: a DOM-ot (és a nyitott tooltipet) békén hagyjuk
   lastKey = key; hideTip(); host.replaceChildren();
   host.classList.toggle('tv', tv);
-  if (!m.days.length) { htmlEl('p', 'tm-empty', 'Ebben a héten nincs mért munkamenet. Az időmérést a feladat ▶ gombjával indíthatod; a mért idők itt jelennek meg idővonalon.', host); return; }
+  if (!m.days.length) { htmlEl('p', 'tm-empty', pr.none + ' Az időmérést a feladat ▶ gombjával indíthatod; a mért idők itt jelennek meg.', host); return; }
   drawTiles(host, m);
-  if (tv) { drawTables(host, m); return; }
-  const c1 = htmlEl('section', 'tm-card', null, host); htmlEl('h3', '', 'Mikor és mire ment el a munkaidő?', c1); htmlEl('p', 'cap', 'Egy sáv = egy munkamenet. Egy sor = egy feladat. Az idő a nap órái szerint halad.', c1);
-  legend(c1, [
-    [sv => svgEl('rect', { x: 1, y: 3, width: 16, height: 8, rx: 3, class: 'tm-bar' }, sv), 'munkamenet'],
-    [sv => svgEl('rect', { x: 1, y: 3, width: 16, height: 8, rx: 3, class: 'tm-bar run' }, sv), 'folyamatban'],
-    [sv => mark(sv, 9, 7, 'create'), 'létrehozva'], [sv => mark(sv, 9, 7, 'done'), 'lezárva (kész)'], [sv => mark(sv, 9, 7, 'reopen'), 'újranyitva'],
-    [sv => svgEl('line', { x1: 9, x2: 9, y1: 1, y2: 13, class: 'tm-now' }, sv), 'most'], [sv => svgEl('line', { x1: 9, x2: 9, y1: 1, y2: 13, class: 'tm-end' }, sv), 'munkaidő vége (16:30)']
-  ]);
-  drawTimeline(c1, m, W, now);
-  const c2 = htmlEl('section', 'tm-card', null, host); htmlEl('h3', '', 'Átfutási idő és tényleges ráfordítás', c2); htmlEl('p', 'cap', 'Az átfutási idő a létrehozástól az utolsó lezárásig (vagy a mostig) tart, a ráfordítás csak a mért munka.', c2);
+  if (tv) { drawTables(host, m, pr.detail); return; }
+  const card = (title, cap) => { const c = htmlEl('section', 'tm-card', null, host); htmlEl('h3', '', title, c); htmlEl('p', 'cap', cap, c); return c; };
+  if (pr.detail) {
+    const c1 = card('Mikor és mire ment el a munkaidő?', 'Egy sáv = egy munkamenet. Egy sor = egy feladat. Az idő a nap órái szerint halad.');
+    legend(c1, [
+      [sv => svgEl('rect', { x: 1, y: 3, width: 16, height: 8, rx: 3, class: 'tm-bar' }, sv), 'munkamenet'],
+      [sv => svgEl('rect', { x: 1, y: 3, width: 16, height: 8, rx: 3, class: 'tm-bar run' }, sv), 'folyamatban'],
+      [sv => mark(sv, 9, 7, 'create'), 'létrehozva'], [sv => mark(sv, 9, 7, 'done'), 'lezárva (kész)'], [sv => mark(sv, 9, 7, 'reopen'), 'újranyitva'],
+      [sv => svgEl('line', { x1: 9, x2: 9, y1: 1, y2: 13, class: 'tm-now' }, sv), 'most'], [sv => svgEl('line', { x1: 9, x2: 9, y1: 1, y2: 13, class: 'tm-end' }, sv), 'munkaidő vége (16:30)']
+    ]);
+    drawTimeline(c1, m, W, now);
+  } else {
+    drawDaily(card(m.bars.some(b => b.tasks === null) ? 'Mennyit dolgoztam hetente?' : 'Mennyit dolgoztam naponta?', m.bars.some(b => b.tasks === null) ? 'Egy oszlop = egy hét (hétfőtől) mért munkaideje.' : 'Egy oszlop = egy nap mért munkaideje.'), m, W);
+    drawHours(card('Mikor dolgozom a nap folyamán?', 'A mért idő a nap óráira elosztva (helyi idő).'), m, W);
+  }
+  const c2 = card('Átfutási idő és tényleges ráfordítás', 'Az átfutási idő a létrehozástól az utolsó lezárásig (vagy a mostig) tart, a ráfordítás csak a mért munka.');
   legend(c2, [
     [sv => svgEl('rect', { x: 1, y: 3, width: 16, height: 8, rx: 3, class: 'tm-ctx' }, sv), 'átfutási idő'], [sv => svgEl('rect', { x: 1, y: 3, width: 16, height: 8, rx: 3, class: 'tm-bar' }, sv), 'ráfordítás (mért munka)']
   ]);
   drawLead(c2, m, W);
-  if (m.findings.length) { const c3 = htmlEl('section', 'tm-card', null, host); htmlEl('h3', '', 'Mit látunk', c3); drawFindings(c3, m); }
+  if (m.findings.length) { const c3 = card('Mit látunk', ''); c3.querySelector('.cap').remove(); drawFindings(c3, m); }
 }
