@@ -56,6 +56,13 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 - Több gép / fájl között azonosító szerinti unióval egyesül, így nem vész el esemény.
 - A napló nem kerül a nyomtatásba.
 
+**Megjegyzések**
+- Egy feladathoz bármikor fűzhetsz szabad szöveges megjegyzést (legfeljebb 300 karakter, egy sorba tömörítve): a sor végén a 💬 gombbal nyílik a mező, az Enter ment, az Esc vagy a Mégse elvet. Üres szöveget a program nem ment.
+- **Szünetnél**: a Szünet után a Mai sáv alatt opcionális kérdés jelenik meg: *Miért állsz meg, mire vársz?* Az Enter ment, az Esc, a Kihagyás vagy egy új munka indítása elveti. Ezek az „Szünet oka" megjegyzések.
+- Az utolsó megjegyzés sárgán látszik a nyitott feladat sorában, és a Mai sávban az aktív feladat alatt, illetve a „Folytatás" gomb alatt, így visszatéréskor azonnal látod, mire vártál. Kész feladat sorában nem látszik. Az összes megjegyzés az Előzmények idővonalán és a napi naplóban időrendben szerepel (`Megjegyzés: …`, `Szünet oka: …`).
+- A megjegyzések a `tortenet.csv`-ben tárolódnak (`mezo = megjegyzes`, `uj` = a szöveg, `regi` = `szunet`, ha szüneteltetéskor íródott), ezért a többi előzményhez hasonlóan csak bővülnek, és gépek között azonosító szerint egyesülnek. A Tárolóban lévő feladatnál a megjegyzés mező nem érhető el.
+- **Fontos**: a 2.12.0-nál régebbi verzió az ismeretlen `megjegyzes` sorokat eldobja, és a következő mentésnél kiírja a fájlból. Ha több gépen használod (munkahely, otthon), mindenhol a frissített fájlt használd.
+
 **Live Desk: munkaidő-mérés**
 - Egy feladaton egyszerre egy munka futhat. A ▶ gombbal indítod a listában vagy a „Következő feladatok" között; a Mai sáv alatt az aktív feladat, az aktuális munkamenet ideje és a feladatra összesen fordított idő látszik.
 - **Szünet** lezárja a munkamenetet, a feladat nyitott marad (a „Folytatás" új munkamenetet indít). **Kész** lezárja a munkamenetet és késszé teszi a feladatot. A lista pipája az aktív feladaton ugyanígy leállítja az időmérést. Újranyitáskor a korábban mért idő megmarad.
@@ -100,7 +107,7 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
   - `statusz`: `nyitott` vagy `kesz`; `tarolo`: `igen`, ha a feladat a Tárolóban van (üres egyébként)
   - a `hatarido` dátum vagy dátum+idő (`2026-11-12T16:00`)
 - `megbizok.csv`: `nev;megjegyzes;aktiv` (`igen` / `nem`)
-- `tortenet.csv`: `id;feladat;idopont;mezo;regi;uj`, egy sor egy esemény (`feladat` = a feladat azonosítója). `mezo`: `letrehozva`, `torolve`, `visszaallitva`, vagy a változott oszlop neve (`statusz`, `hatarido`, `megbizo`, `datum`, `feladat`, `tarolo`); `regi` / `uj` a régi és az új érték. Ne szerkeszd kézzel: a sorok azonosító szerint egyesülnek, az érvénytelen sorokat a program eldobja.
+- `tortenet.csv`: `id;feladat;idopont;mezo;regi;uj`, egy sor egy esemény (`feladat` = a feladat azonosítója). `mezo`: `letrehozva`, `torolve`, `visszaallitva`, vagy a változott oszlop neve (`statusz`, `hatarido`, `megbizo`, `datum`, `feladat`, `tarolo`); `regi` / `uj` a régi és az új érték. `megjegyzes`: szabad szöveges megjegyzés (`uj` = a szöveg, `regi` = `szunet`, ha szüneteltetéskor íródott). Ne szerkeszd kézzel: a sorok azonosító szerint egyesülnek, az érvénytelen sorokat a program eldobja.
 - `munkamenetek.csv`: `id;feladat_id;kezdet;veg;idotartam_mp;ok`, egy sor egy munkamenet. A futó munkamenet sorában a `veg`, az `idotartam_mp` és az `ok` üres. `ok`: `szunet`, `valtas`, `kesz`, `tarolo` (a feladat Tárolóba tétele zárta le), `torles` (a feladat törlése zárta le). Az időtartam a valós eltelt időből készül lezáráskor.
   - A `kezdet` és a `veg` helyi, időzóna nélküli időbélyeg (mint a többi fájlban), ezért az óraállítás (nyári/téli idő) a rögzített időtartamot nem torzítja; éjfélen átnyúló munkamenet a statisztikában kettéosztódik a napok között.
   - Hibás vagy hiányzó sor beolvasáskor javítódik / eldobódik (előtte `…_javitas-elott.csv` másolat készül); ismeretlen fejlécű fájlt a program nem ír felül. Ne szerkeszd kézzel futó munka közben.
@@ -139,7 +146,7 @@ npm run test:ui   # csak a böngészős teszt
 
 - `tests/pure.test.js`: CSV beolvasás/kiírás és migráció, dátum- és időellenőrzés, határidő-állapotok, heti/havi statisztika, rendezés, megbízók (egyezés, javaslat, összefésülés), Tároló, előzmények (változás-észlelés, CSV, egyesítés, leírások, idővonal, napi napló).
 - `tests/worktime.test.js`: a munkamenet-modell (indítás, szünet, váltás, kész, újranyitás, több munkamenet összege, éjfél, nyári/téli időszámítás-váltás, alvás- és óraugrás-észlelés, CSV, hibás/hiányzó/két aktív sor, egyesítés) és a mért idő statisztika, rögzített időzónában és vezérelt órával.
-- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, előzményeket és a napi naplót, a Live Desket (indítás, váltás, szünet, kész, frissítés utáni helyreállás, alvás és óraugrás vezérelt órával, statisztika, munkaidő-térkép), nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
+- `tests/ui.test.js`: headless Chrome memóriabeli mappa-szimulációval. Lefedi a csatlakozást és migrációt, felvitelt, szűrést, szerkesztést, autocomplete-et, megbízói panelt, dashboardot, Tárolót, összecsukható napokat, előzményeket és a napi naplót, a Live Desket (indítás, váltás, szünet, kész, frissítés utáni helyreállás, alvás és óraugrás vezérelt órával, statisztika, munkaidő-térkép, megjegyzések), nyomtatást, telefonos nézetet, külső módosítást, billentyűket. A „ma" fix (2026-11-09), így a teszt bármikor ugyanúgy fut. A képernyőképek a `tests/out` mappába kerülnek.
 - A UI-teszt Chrome-ot keres a szokásos helyeken; ha máshol van, add meg a `CHROME_PATH` környezeti változóval.
 
 Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verziókezelésbe.
@@ -148,6 +155,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.12.0 | Megjegyzések: szünetnél opcionális „miért állsz meg, mire vársz", és bármikor a 💬 gombbal; a `tortenet.csv`-ben tárolva, a sorban, a Mai sávban, az előzményekben és a napi naplóban látszik |
 | 2.11.0 | A munkaidő-térkép összesített nézetei: Hónap (lapozható), Hét és Összes; napi mért idő és óránkénti eloszlás |
 | 2.10.0 | Munkaidő-térkép az Áttekintés alján: idővonal, átfutási idő és ráfordítás egymás mellett, megállapítások, táblázat nézet |
 | 2.9.4 | Az élő munka sávjában a határidő- és megbízó-chip függőlegesen középre igazítva |

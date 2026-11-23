@@ -1,5 +1,6 @@
 // Live Desk: aktív munka sáv, mért idő, következő feladatok (a napi státuszsávban)
 import { $, ICON_CLOCK, ICON_PAUSE, ICON_PLAY, ICON_USER, esc, isDone, live, st } from './state.js';
+import { commentMap, fmtWhen } from './history.js';
 import { TAG_RE, dueInfo, isParked } from './tasks.js';
 import { stampAt, toMs, todayStr } from './util.js';
 import { activeOf, capOf, durMs, fmtHMS, fmtWork, workMsOfTask, workMsOn } from './worktime.js';
@@ -37,13 +38,20 @@ export function nextRow({ t, di }){
     + `<button type="button" class="al ${di ? di.state : 'none'}" data-goto="${esc(t.id)}" title="${esc(t.feladat)}">${chip}<span class="at">${esc(shortText(t))}</span></button></div>`;
 }
 
+// a feladat legutóbbi megjegyzése a sáv alatt (a szüneteltetéskor írt „mire vársz" itt látszik, amikor visszatérsz)
+const cmtLine = id => { const c = commentMap(st.hist).get(id); return c ? `<div class="ld-cmt" title="${esc(fmtWhen(c.idopont))}">💬 <time>${esc(fmtWhen(c.idopont))}</time> ${esc(c.uj)}</div>` : ''; };
+// szüneteltetés után: opcionális megjegyzés
+const noteForm = () => `<form class="ld-note" data-id="${esc(live.note.id)}"><label for="ldNote">Miért állsz meg, mire vársz?</label>`
+  + `<input id="ldNote" name="megjegyzes" type="text" maxlength="300" autocomplete="off" value="${esc(live.note.text)}" placeholder="pl. válaszra várok, teszt-környezet kell"><button type="submit" class="mini ok">Mentés</button><button type="button" class="mini" data-live="note-skip">Kihagyás</button></form>`;
+
 // a napi sáv alatti sor: aktív feladat vagy „nincs aktív feladat"
 export function liveBar(now = Date.now()){
   const a = activeOf(st.sessions), cap = capOf(live.gap);
   if (!a) {
     const last = lastWorked();
     return `<div class="ld off"><i class="ld-dot"></i><span class="ld-tag">Nincs aktív feladat</span><span class="ld-hint">Indíts munkát a ▶ gombbal a listában vagy a következő feladatok között.</span>`
-      + (last ? `<button type="button" class="mini ld-go" data-live="start" data-id="${esc(last.id)}" title="Munka folytatása ezen a feladaton">${ICON_PLAY} Folytatás: ${esc(shortText(last).slice(0, 40))}</button>` : '') + `</div>`;
+      + (last ? `<button type="button" class="mini ld-go" data-live="start" data-id="${esc(last.id)}" title="Munka folytatása ezen a feladaton">${ICON_PLAY} Folytatás: ${esc(shortText(last).slice(0, 40))}</button>` : '') + `</div>`
+      + (live.note && st.tasks.some(x => x.id === live.note.id) ? noteForm() : (last ? cmtLine(last.id) : ''));
   }
   const t = st.tasks.find(x => x.id === a.feladat_id), di = t ? dueInfo(t, now) : null;
   const sess = fmtHMS(durMs(a, now, cap)), tot = fmtWork(workMsOfTask(st.sessions, a.feladat_id, now, cap));
@@ -55,7 +63,7 @@ export function liveBar(now = Date.now()){
     + `<span class="ld-sum" title="A feladatra összesen fordított idő (az összes munkamenet)">Σ <b class="mono" id="ldTotal">${tot}</b></span>`
     + `<span class="ld-act"><button type="button" class="mini" data-live="pause" title="Szüneteltetés: a munkamenet lezárul, a feladat nyitott marad">${ICON_PAUSE} Szünet</button>`
     + `<button type="button" class="mini ok" data-live="finish" title="Befejezés: a feladat kész lesz, a mért idő megmarad">✓ Kész</button></span></div>`
-    + (live.gap ? gapPanel(a, now) : '');
+    + (live.gap ? gapPanel(a, now) : '') + cmtLine(a.feladat_id);
 }
 
 const hm = ms => stampAt(ms).slice(11, 16);

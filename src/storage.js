@@ -152,9 +152,9 @@ export async function reconnect(){
   } catch (e) { st.err = e; renderStatus(); }
 }
 
-export function queueSave(kind){                                              // kind: 'p' = csak a megbízók listája, 's' = csak a munkamenetek
+export function queueSave(kind){                                              // kind: 'p' = csak a megbízók listája, 's' = csak a munkamenetek, 'h' = csak az előzmények
   logChanges();                                                               // mi változott a feladatokban → előzmény-események
-  if (kind === 'p') st.dirtyP = true; else if (kind === 's') { if (!st.sessBlocked) st.dirtyS = true; } else st.dirty = true;
+  if (kind === 'p') st.dirtyP = true; else if (kind === 's') { if (!st.sessBlocked) st.dirtyS = true; } else if (kind === 'h') st.dirtyH = true; else st.dirty = true;
   persistLocal();
   if (st.mode !== 'folder') setOffline(true);
   renderStatus();

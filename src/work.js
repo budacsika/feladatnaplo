@@ -20,6 +20,7 @@ export async function startWorkOn(id){
   const t = st.tasks.find(x => x.id === id);
   if (!t || isDone(t) || isParked(t)) { toast('Csak nyitott, ütemezett feladaton indítható munka.'); return; }
   await syncSessions();
+  live.note = null;                                                              // az új munka elindítása elveti a függő megjegyzés-kérdést
   const now = Date.now(), r = startWork(st.sessions, id, now);
   if (r.same) { toast('Már ezen a feladaton dolgozol.'); return; }
   live.gap = null; setHb(now);
@@ -40,7 +41,9 @@ export async function pauseActive(){
   const now = Date.now(), cap = capOf(live.gap), d = durMs(a, now, cap);
   const c = pauseWork(st.sessions, Math.min(now, cap));
   live.gap = null;
+  live.note = { id: c.feladat_id, text: '' };                                    // opcionális: miért állsz meg / mire vársz
   queueSave('s'); render();
+  const ni = document.querySelector('#today .ld-note input'); if (ni) ni.focus();
   toast(`Szüneteltetve · ${fmtWork(d)} · ${nameOf(c.feladat_id)}`, 'Folytatás', () => startWorkOn(c.feladat_id));
 }
 

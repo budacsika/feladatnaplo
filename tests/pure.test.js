@@ -5,7 +5,7 @@ import { mergeInto, extractTags, cimkeToTags, dueInfo, HEADER, cmpTasks, isParke
 import { detectDelimiter, parseCSV, rowsToTasks, toCSV } from '../src/csv.js';
 import { pkey, normName, parsePeople, peopleToCSV, seedPeople, reconcilePeople, mergePeopleInto, lev, suggestPeople, exactPerson } from '../src/people-model.js';
 import { periodStats, peopleStats } from '../src/stats.js';
-import { diffTasks, makeSnap, mergeHistory, histToCSV, parseHistory, describeEvent, timelineFor, journalDay, fmtWhen, HIST_HEADER } from '../src/history.js';
+import { diffTasks, makeSnap, mergeHistory, histToCSV, parseHistory, describeEvent, timelineFor, journalDay, fmtWhen, HIST_HEADER, makeComment, commentMap } from '../src/history.js';
 
 const parse = raw => { const d = detectDelimiter(raw); return rowsToTasks(parseCSV(raw, d), d); };
 
@@ -327,5 +327,24 @@ console.log('Minden pure teszt rendben ✔');
     [{ id: 'z1', feladat: 'gone', idopont: '2026-11-09T11:00:00', mezo: 'torolve', regi: 'Törölt tétel', uj: '' }], '2026-11-09');
   assert.deepStrictEqual(jd.map(x => [x.at.slice(11, 16), x.text, x.task, x.gone]), [['09:12', 'Létrehozva', 'Teszt', false], ['11:00', 'Törölve', 'Törölt tétel', true], ['14:20', 'Lezárva', 'Teszt', false]]);
   assert.deepStrictEqual(journalDay([old], [], '2026-11-10'), []);
+}
+// megjegyzések: új eseménytípus a tortenet.csv-ben
+{
+  const c = makeComment('a1', '  Válaszra várok;\n  "Kiss Anna" \t jóváhagyására  ', 'szunet', '2026-11-23T09:50:00');
+  assert.deepStrictEqual([c.feladat, c.idopont, c.mezo, c.regi, c.uj], ['a1', '2026-11-23T09:50:00', 'megjegyzes', 'szunet', 'Válaszra várok; "Kiss Anna" jóváhagyására'], 'egy sorba tömörítve, a ; és az idézőjel megmarad');
+  assert.strictEqual(makeComment('a1', '   \n ', '', 'x'), null, 'üres szövegből nincs megjegyzés'); assert.strictEqual(makeComment('', 'x', '', 'x'), null);
+  assert.strictEqual(makeComment('a1', 'x'.repeat(500), '', 'x').uj.length, 300, 'legfeljebb 300 karakter'); assert.strictEqual(makeComment('a1', 'szöveg', 'valami', 'x').regi, '', 'csak a „szunet" jelölés marad');
+  // CSV-oda-vissza: a pontosvessző, idézőjel és újsor nem rontja el, a sorrend és az azonosító megmarad
+  const evs = [c, makeComment('a1', 'Később: "kész" lesz; 2. sor', '', '2026-11-23T11:00:00')];
+  const back = parseHistory(histToCSV(evs));
+  assert.deepStrictEqual(back.map(e => [e.mezo, e.regi, e.uj]), evs.map(e => ['megjegyzes', e.regi, e.uj]), 'CSV-körút');
+  assert.strictEqual(parseHistory(histToCSV([{ id: 'u1', feladat: 'a1', idopont: '2026-11-23T10:00:00', mezo: 'ismeretlen', regi: '', uj: 'x' }, c])).length, 1, 'ismeretlen eseménytípus továbbra is kimarad');
+  assert.strictEqual(describeEvent(c), 'Szünet oka: Válaszra várok; "Kiss Anna" jóváhagyására'); assert.strictEqual(describeEvent(evs[1]), 'Megjegyzés: Később: "kész" lesz; 2. sor');
+  assert(describeEvent({ mezo: 'megjegyzes', regi: '', uj: 'y'.repeat(400) }).length <= 'Megjegyzés: '.length + 300, 'hosszú szöveg csonkolva a leírásban');
+  const cm = commentMap([...evs, makeComment('b2', 'másik feladat', '', '2026-11-23T08:00:00'), { id: 'x', feladat: 'a1', idopont: '2026-11-23T12:00:00', mezo: 'statusz', regi: '', uj: 'kesz' }]);
+  assert.strictEqual(cm.get('a1').uj, 'Később: "kész" lesz; 2. sor', 'feladatonként a legutóbbi megjegyzés'); assert.strictEqual(cm.get('b2').uj, 'másik feladat'); assert.strictEqual(cm.size, 2);
+  // a napi napló és az idővonal is mutatja
+  const jd = journalDay([{ id: 'a1', datum: '2026-11-23', feladat: 'Teszt', megbizo: '', hatarido: '', statusz: 'nyitott', tarolo: '', letrehozva: '2026-11-23T08:00:00' }], evs, '2026-11-23');
+  assert.deepStrictEqual(jd.map(x => x.text.split(':')[0]), ['Létrehozva', 'Szünet oka', 'Megjegyzés']);
 }
 console.log('Előzmény pure tesztek ✔');

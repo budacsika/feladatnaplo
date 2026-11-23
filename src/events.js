@@ -10,9 +10,10 @@ import { moveFromPark, sendToPark, setPark, setParkOpen } from './park.js';
 import { addPerson, removePerson, renamePerson, renderPeople } from './people.js';
 import { exactPerson, normName, pkey, reconcilePeople, suggestPeople } from './people-model.js';
 import { setJournal, setJournalDay, shiftJournal } from './journal.js';
+import { addComment } from './notes.js';
 import { finishActive, pauseActive, resolveGap, startWorkOn } from './work.js';
 import { flash, render } from './render.js';
-import { $, LS_DASH, LS_PARK, LS_PPL, isDone, ov, st, ui } from './state.js';
+import { $, LS_DASH, LS_PARK, LS_PPL, isDone, live, ov, st, ui } from './state.js';
 import { toast } from './status.js';
 import { checkExternal, decodeFile, flush, parseText, pickFolder, queueSave, reconnect } from './storage.js';
 import { isParked } from './tasks.js';
@@ -57,9 +58,16 @@ $('#today').addEventListener('click', e => {
   const j = e.target.closest('[data-jump]');
   if (j) { if (j.dataset.jump === 'park' && !ov.park) setParkOpen(true); const el = document.getElementById(j.dataset.jump); if (el) el.scrollIntoView({ behavior:'smooth', block:'start' }); return; }
   const lv = e.target.closest('[data-live]');
-  if (lv) { const a = lv.dataset.live; if (a === 'start') startWorkOn(lv.dataset.id); else if (a === 'pause') pauseActive(); else if (a === 'finish') finishActive(); else if (a === 'gap-keep') resolveGap('keep'); else if (a === 'gap-resume') resolveGap('resume'); else if (a === 'gap-stop') resolveGap('stop', ($('#ldGapAt') || {}).value); return; }
+  if (lv) { const a = lv.dataset.live; if (a === 'start') startWorkOn(lv.dataset.id); else if (a === 'pause') pauseActive(); else if (a === 'finish') finishActive(); else if (a === 'note-skip') { live.note = null; render(); } else if (a === 'gap-keep') resolveGap('keep'); else if (a === 'gap-resume') resolveGap('resume'); else if (a === 'gap-stop') resolveGap('stop', ($('#ldGapAt') || {}).value); return; }
   const g = e.target.closest('[data-goto]');
   if (g) { resetFilters(); st.editing = null; renderList(); flash(g.dataset.goto); }
+});
+$('#today').addEventListener('input', e => { if (live.note && e.target.closest && e.target.closest('.ld-note')) live.note.text = e.target.value; });
+$('#today').addEventListener('keydown', e => { if (e.key === 'Escape' && e.target.closest && e.target.closest('.ld-note')) { live.note = null; render(); } });
+$('#today').addEventListener('submit', e => {
+  const f = e.target.closest && e.target.closest('.ld-note'); if (!f) return;
+  e.preventDefault(); const txt = new FormData(f).get('megjegyzes'), id = f.dataset.id; live.note = null;
+  if (!addComment(id, txt, 'szunet')) render();
 });
 $('#dash').addEventListener('click', e => {
   const nav = e.target.closest('[data-nav]');
@@ -100,6 +108,8 @@ list.addEventListener('click', e => {
     case 'edit': startEdit(id); break;
     case 'start': startWorkOn(id); break;
     case 'pause': pauseActive(); break;
+    case 'note': ui.noteOpen = ui.noteOpen === id ? null : id; ui.noteDraft = ''; renderList(); { const ni = document.querySelector('#list .note-add input'); if (ni) ni.focus(); } break;
+    case 'notex': ui.noteOpen = null; ui.noteDraft = ''; renderList(); break;
     case 'hist': ui.histOpen.has(id) ? ui.histOpen.delete(id) : ui.histOpen.add(id); renderList(); break;
     case 'cancel': st.editing = null; renderList(); break;
     case 'day': { const ds = b.dataset.day; ui.dayState.set(ds, b.getAttribute('aria-expanded') !== 'true'); renderList(); break; }
@@ -116,8 +126,11 @@ list.addEventListener('change', e => {
   updateTask(e.target.closest('[data-id]').dataset.id, { statusz: e.target.checked ? 'kesz' : 'nyitott' });
 });
 list.addEventListener('dblclick', e => { const s = e.target.closest('.txt'); if (s) startEdit(s.closest('[data-id]').dataset.id); });
+list.addEventListener('input', e => { if (e.target.closest && e.target.closest('.note-add')) ui.noteDraft = e.target.value; });
+list.addEventListener('keydown', e => { if (e.key === 'Escape' && e.target.closest && e.target.closest('.note-add')) { ui.noteOpen = null; ui.noteDraft = ''; renderList(); } });
 list.addEventListener('submit', e => {
   e.preventDefault();
+  if (e.target.classList.contains('note-add')) { const f = e.target, txt = new FormData(f).get('megjegyzes'); ui.noteOpen = null; ui.noteDraft = ''; if (!addComment(f.dataset.id, txt, '')) renderList(); return; }
   const f = e.target, id = f.dataset.id, t = st.tasks.find(x => x.id === id); if (!t) return;
   const fd = new FormData(f), text = String(fd.get('feladat') || '').trim();
   if (!text) { toast('A feladat szövege nem lehet üres.'); return; }

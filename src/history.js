@@ -6,7 +6,7 @@ import { newId, normStamp } from './util.js';
 export const HIST_HEADER = ['id', 'feladat', 'idopont', 'mezo', 'regi', 'uj'];
 // ezeknek a mezőknek a változását naplózzuk (a modositva/lezarva/letrehozva időbélyegek következmények, nem külön események)
 export const TRACKED = ['datum', 'feladat', 'megbizo', 'hatarido', 'statusz', 'tarolo'];
-const KINDS = new Set([...TRACKED, 'letrehozva', 'torolve', 'visszaallitva']);
+const KINDS = new Set([...TRACKED, 'letrehozva', 'torolve', 'visszaallitva', 'megjegyzes']);   // megjegyzes: szabad szöveges komment (uj = szöveg, regi = 'szunet', ha a szüneteltetéskor íródott)
 
 const str = v => String(v ?? '');
 const snapOf = t => ({ datum: str(t.datum), feladat: str(t.feladat), megbizo: str(t.megbizo), hatarido: str(t.hatarido), statusz: str(t.statusz), tarolo: str(t.tarolo) });
@@ -86,8 +86,21 @@ export function describeEvent(e){
     case 'datum': return `Nap: ${dash(e.regi)} → ${dash(e.uj)}`;
     case 'feladat': return `Szöveg módosítva: „${clip(e.regi, 40)}” → „${clip(e.uj, 40)}”`;
     case 'tarolo': return e.uj === 'igen' ? 'Tárolóba téve' : 'Tárolóból kivéve';
+    case 'megjegyzes': return (e.regi === 'szunet' ? 'Szünet oka: ' : 'Megjegyzés: ') + clip(e.uj, 300);
     default: return e.mezo;
   }
+}
+
+// Megjegyzés-esemény (a szöveg egy sorba tömörítve, legfeljebb 300 karakter); üres szövegre null
+export function makeComment(taskId, text, kind, at){
+  const uj = str(text).replace(/\s+/g, ' ').trim().slice(0, 300);
+  return uj && taskId ? { id: newId(), feladat: taskId, idopont: at, mezo: 'megjegyzes', regi: kind === 'szunet' ? 'szunet' : '', uj } : null;
+}
+// feladatonként a legutóbbi megjegyzés: Map(feladat → esemény)
+export function commentMap(hist){
+  const m = new Map();
+  for (const e of hist) if (e.mezo === 'megjegyzes' && str(e.uj).trim()) { const p = m.get(e.feladat); if (!p || e.idopont >= p.idopont) m.set(e.feladat, e); }
+  return m;
 }
 
 // "2026-11-09T16:20:05" → "11.09. 16:20"

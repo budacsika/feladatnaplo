@@ -17,6 +17,6 @@ export function tick(){
   if (mk !== lastMinute) {
     lastMinute = mk;
     $('#dateLine').textContent = n.toLocaleDateString('hu-HU', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
-    if (!st.editing && ov.pEdit == null && document.visibilityState === 'visible' && !(live.gap && document.activeElement && document.activeElement.closest && document.activeElement.closest('.ld-gap'))) render();   // határidő-számlálók frissítése
+    if (!st.editing && ov.pEdit == null && document.visibilityState === 'visible' && !(live.gap && document.activeElement && document.activeElement.closest && document.activeElement.closest('.ld-gap')) && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('.ld-note, .note-add'))) render();   // határidő-számlálók frissítése
   }
 }

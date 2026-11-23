@@ -660,6 +660,67 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert.strictEqual(await page.$eval('#fDue', e => e.value), todayStr0 + 'T16:30', 'a gyorsgomb ma 16:30-ra állítja a határidőt');
   assert.strictEqual(await page.$eval('#addForm [data-due="today1630"]', e => e.textContent.trim()), 'Ma 16:30');
 
+  // 18) megjegyzések: szünetnél és bármikor; a tortenet.csv-be kerülnek
+  await page.type('#fText', 'Komment teszt'); await page.click('#addForm .primary');
+  const idK = await idOf('Komment teszt'), nCmt = () => page.evaluate(() => (window.__text('tortenet.csv').match(/;megjegyzes;/g) || []).length);
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idK);
+  await page.waitForSelector('#today .ld.on');
+  await page.click('#today [data-live="pause"]');
+  await page.waitForSelector('#today .ld-note input');
+  assert.strictEqual(await page.evaluate(() => document.activeElement && document.activeElement.id), 'ldNote', 'szünet után a megjegyzés mezőn áll a fókusz');
+  assert((await page.$eval('#today .ld-note', e => e.textContent)).includes('Miért állsz meg, mire vársz?'));
+  await page.type('#ldNote', 'válaszra várok; "Kiss Anna" jóváhagyására'); await (await page.$('#today')).screenshot({ path: path.resolve(OUT, 'shot-pause-note.png') });
+  await page.$eval('#ldNote', e => { e.value = ''; e.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('#ldNote', 'válaszra várok; "Kiss Anna" jóváhagyására'); await page.keyboard.press('Enter'); await sleep(900);
+  assert.strictEqual(await page.$('#today .ld-note'), null, 'mentés után a kérdés eltűnik');
+  const htCsv = await page.evaluate(() => window.__text('tortenet.csv'));
+  assert(/;megjegyzes;szunet;"?válaszra várok; ""Kiss Anna"" jóváhagyására"?/.test(htCsv), 'a komment a tortenet.csv-ben, szünet jelöléssel: ' + htCsv.split('\n').filter(l => l.includes('megjegyzes')).join(' | '));
+  assert((await page.$eval('#today .ld-cmt', e => e.textContent)).includes('válaszra várok'), 'a „Folytatás" sáv alatt látszik, mire vársz');
+  assert((await page.$eval(`#list [data-id="${idK}"] .cmt`, e => e.textContent)).includes('válaszra várok'), 'a sorban is látszik');
+  // Esc / Kihagyás: nem keletkezik esemény
+  const cmtN = await nCmt();
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idK); await page.waitForSelector('#today .ld.on');
+  await page.click('#today [data-live="pause"]'); await page.waitForSelector('#today .ld-note input');
+  await page.keyboard.press('Escape'); await sleep(200);
+  assert.strictEqual(await page.$('#today .ld-note'), null, 'Esc elveti a kérdést'); assert.strictEqual(await nCmt(), cmtN, 'Esc nem ment kommentet');
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idK); await page.waitForSelector('#today .ld.on');
+  await page.click('#today [data-live="pause"]'); await page.waitForSelector('#today .ld-note input');
+  await page.click('#today [data-live="note-skip"]'); await sleep(200);
+  assert.strictEqual(await page.$('#today .ld-note'), null, 'a Kihagyás elveti a kérdést');
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idK); await page.waitForSelector('#today .ld.on');
+  await page.click('#today [data-live="pause"]'); await page.waitForSelector('#today .ld-note input');
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="start"]`).click(), idK); await page.waitForSelector('#today .ld.on');
+  assert.strictEqual(await page.$('#today .ld-note'), null, 'új munka indítása elveti a függő kérdést');
+  await page.click('#today [data-live="pause"]'); await page.waitForSelector('#today .ld-note input'); await page.keyboard.press('Escape');
+  // 💬 gomb: bármikor hozzáfűzhető, üres szöveg nem ment
+  await page.click(`#list [data-id="${idK}"] [data-act="note"]`);
+  await page.waitForSelector('#list .note-add input');
+  assert.strictEqual(await page.evaluate(() => document.activeElement && document.activeElement.closest('.note-add') !== null), true, 'a mezőn áll a fókusz');
+  await page.keyboard.press('Enter'); await sleep(300);
+  assert.strictEqual(await page.$('#list .note-add'), null); assert.strictEqual(await nCmt(), cmtN, 'üres komment nem ment');
+  await page.click(`#list [data-id="${idK}"] [data-act="note"]`); await page.waitForSelector('#list .note-add input');
+  await page.type('#list .note-add input', 'elvetett'); await page.keyboard.press('Escape'); await sleep(200);
+  assert.strictEqual(await page.$('#list .note-add'), null, 'Esc bezárja'); assert.strictEqual(await nCmt(), cmtN);
+  await page.click(`#list [data-id="${idK}"] [data-act="note"]`); await page.waitForSelector('#list .note-add input');
+  await page.type('#list .note-add input', 'második komment'); await page.keyboard.press('Enter'); await sleep(900);
+  assert.strictEqual(await nCmt(), cmtN + 1, 'a komment a fájlban');
+  assert((await page.$eval(`#list [data-id="${idK}"] .cmt`, e => e.textContent)).includes('második komment'), 'a sorban a legutóbbi komment látszik');
+  await page.click(`#list [data-id="${idK}"] [data-act="hist"]`);
+  const histTxt = await page.$eval(`#list [data-for="${idK}"].hist`, e => e.textContent);
+  assert(histTxt.includes('Szünet oka: válaszra várok') && histTxt.includes('Megjegyzés: második komment'), 'az előzmények között időrendben mindkettő: ' + histTxt);
+  await page.click('#btnJournal'); await sleep(200);
+  const jTxt = await page.$eval('#journalBody', e => e.textContent);
+  assert(jTxt.includes('Szünet oka: válaszra várok') && jTxt.includes('Megjegyzés: második komment'), 'a napi naplóban is: ' + jTxt.slice(0, 200));
+  await page.click('#btnJournal');
+  await (await page.$(`#list [data-id="${idK}"]`)).screenshot({ path: path.resolve(OUT, 'shot-comment.png') });
+  // frissítés után is megvan; kész feladaton a komment nem zavar a sorban
+  await page.reload(); await page.waitForSelector('#list .task');
+  await sleep(500);
+  assert((await page.$eval(`#list [data-id="${idK}"] .cmt`, e => e.textContent)).includes('második komment'), 'újratöltés után is megvan');
+  await page.evaluate(id => document.querySelector(`#list [data-id="${id}"] [data-act="toggle"]`).click(), idK); await sleep(300);
+  assert.strictEqual(await page.$eval(`#list [data-id="${idK}"] .cmt`, e => getComputedStyle(e).display).catch(() => 'none'), 'none', 'kész feladaton a komment nem látszik a sorban');
+  assert.strictEqual(await page.evaluate(() => document.querySelectorAll('#list .task.editing').length), 0);
+
   assert.deepStrictEqual(errors, [], 'nincs JS hiba: ' + errors.join(' | '));
   console.log('UI teszt rendben ✔');
   await browser.close();
