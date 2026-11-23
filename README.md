@@ -30,6 +30,11 @@ Frissítéskor elég a `feladatnaplo.html` fájlt lecserélni, az adatok a CSV-k
 - Szerkesztés, törlés, visszavonás; kész jelölés (a lezárás ideje is mentődik)
 - A kész feladatok a nap aljára kerülnek, a nyitottak a rögzítés ideje szerint rendezettek
 
+**Hosszú lista kezelése**
+- A lista hónap › hét › nap csoportokban jelenik meg (a hónap a hét hétfőjének hónapja szerint; a jelenlegi hónapnak nincs külön fejléce). Minden fejlécen látszik: hány nap, hány feladat kész, zárva a nyitottak száma
+- Alapból nyitva: a jelenlegi hét és minden hónap/hét/nap, amelyikben megoldatlan feladat van; a csupa kész, régebbi csoportok zárva. Keresés/szűrés közben minden találat látszik; a „Mind kinyit" és az „Alapnézet" gombok a csoportokra is hatnak; nyomtatásban minden kinyílik
+- **Adatgyűjtés hőtérkép-sáv** a lista fölött: egy négyzet egy nap (oszlop egy hét, hétfőtől vasárnapig), színe a napi feladatok számát mutatja, arany pont = van nyitott feladat, arany keret = ma. Az összegző sor: mióta, hány nap, hány munkanap, hány feladat. A négyzetre kattintva a lista az adott naphoz ugrik (kinyitja a hetét és a hónapját is)
+
 **Megbízók**
 - Külön lista (`megbizok.csv`), elgépelés-védő automatikus kiegészítéssel: ismeretlen név nem rögzíthető véletlenül, a hasonló nevet felajánlja
 - Megbízói panel: kitől hány feladat jött, átnevezés (a feladatok követik), inaktiválás
@@ -155,6 +160,7 @@ Az adatfájlok (`*.csv`, `mentesek/`) a `.gitignore` miatt nem kerülnek verzió
 
 | Verzió | Újdonság |
 |---|---|
+| 2.13.0 | A lista hónap › hét › nap csoportokban, összecsukható fejlécekkel; adatgyűjtés hőtérkép-sáv a lista fölött (kattintásra a naphoz ugrik) |
 | 2.12.0 | Megjegyzések: szünetnél opcionális „miért állsz meg, mire vársz", és bármikor a 💬 gombbal; a `tortenet.csv`-ben tárolva, a sorban, a Mai sávban, az előzményekben és a napi naplóban látszik |
 | 2.11.0 | A munkaidő-térkép összesített nézetei: Hónap (lapozható), Hét és Összes; napi mért idő és óránkénti eloszlás |
 | 2.10.0 | Munkaidő-térkép az Áttekintés alján: idővonal, átfutási idő és ráfordítás egymás mellett, megállapítások, táblázat nézet |

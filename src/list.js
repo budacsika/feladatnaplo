@@ -4,7 +4,7 @@ import { clip, commentMap, fmtWhen, timelineFor } from './history.js';
 import { renderPark } from './park.js';
 import { $, ICON_CLOCK, ICON_PAUSE, ICON_PLAY, ICON_USER, esc, isDone, live, st, ui } from './state.js';
 import { cmpTasks, dueInfo, isParked } from './tasks.js';
-import { todayStr } from './util.js';
+import { groupKeys, monthLabel, todayStr, weekKeyOf, weekLabel } from './util.js';
 import { activeOf, capOf, durMs, fmtHMS, fmtWork, workTotals } from './worktime.js';
 
 /* ---------- lista ---------- */
@@ -79,20 +79,38 @@ export function renderList(){
   }
   vis.sort(cmpTasks);                                                    // stabil rendezés: egyenlő esetben a fájlbeli sorrend marad
   const cnt = {}, dn = {}; vis.forEach(t => { cnt[t.datum] = (cnt[t.datum]||0) + 1; if (isDone(t)) dn[t.datum] = (dn[t.datum]||0) + 1; });
-  const today = todayStr();
+  const today = todayStr(), curW = weekKeyOf(today), curM = curW.slice(0, 7);
   const forced = terms.length > 0 || ui.status !== 'all' || ui.period !== 'all';          // keresés/szűrés közben minden találat látszik
   const editDay = st.editing ? (st.tasks.find(x => x.id === st.editing) || {}).datum : null;
   const isOpen = ds => forced || ds === editDay || (ui.dayState.has(ds) ? ui.dayState.get(ds) : ds === today || cnt[ds] > (dn[ds] || 0));   // alapból nyitva: a mai nap és minden nap, amelyikben van megoldatlan feladat
   const wm = workTotals(st.sessions, now, capOf(live.gap)), cm = commentMap(st.hist);
-  let html = '', cur = null;
-  for (const t of vis) {
-    if (t.datum !== cur) {
-      if (cur !== null) html += '</ul></section>';
-      cur = t.datum;
-      const op = isOpen(cur), nOpen = cnt[cur] - (dn[cur]||0);
-      html += `<section class="day${cur === today ? ' is-today' : ''}${op ? '' : ' collapsed'}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? 'Összecsukás' : 'Kinyitás'}"><span class="chev">▾</span>${esc(dayLabel(cur))}</button><small>${dn[cur]||0}/${cnt[cur]} kész${!op && nOpen ? ` · <b>${nOpen} nyitott</b>` : ''}</small></h2><ul>`;
+  const dayHTML = (cur, ts) => {
+    const op = isOpen(cur), nOpen = cnt[cur] - (dn[cur]||0);
+    return `<section class="day${cur === today ? ' is-today' : ''}${op ? '' : ' collapsed'}"><h2><button type="button" class="dtoggle" data-act="day" data-day="${esc(cur)}" aria-expanded="${op}" title="${op ? 'Összecsukás' : 'Kinyitás'}"><span class="chev">▾</span>${esc(dayLabel(cur))}</button><small>${dn[cur]||0}/${cnt[cur]} kész${!op && nOpen ? ` · <b>${nOpen} nyitott</b>` : ''}</small></h2><ul>${ts.map(t => taskRows(t, terms, now, wm, cm)).join('')}</ul></section>`;
+  };
+  // napok → hetek → hónapok (egymást követő, azonos hetű / hónapú napok)
+  const days = []; for (const t of vis) { const l = days[days.length - 1]; if (l && l.ds === t.datum) l.ts.push(t); else days.push({ ds: t.datum, ts: [t] }); }
+  const weeks = []; for (const d of days) { const k = weekKeyOf(d.ds), l = weeks[weeks.length - 1]; if (l && l.k === k) l.days.push(d); else weeks.push({ k, days: [d] }); }
+  const sum = ds => ds.reduce((a, d) => (a.n += cnt[d.ds], a.done += dn[d.ds] || 0, a.d++, a), { n: 0, done: 0, d: 0 });
+  const grp = (cls, key, label, tag, g, open, body) => `<section class="grp ${cls}${open ? '' : ' collapsed'}"><h3><button type="button" class="dtoggle gtoggle" data-act="grp" data-g="${esc(key)}" aria-expanded="${open}" title="${open ? 'Összecsukás' : 'Kinyitás'}"><span class="chev">▾</span>${esc(label)}${tag}</button><small>${g.d} nap · ${g.done}/${g.n} kész${!open && g.n > g.done ? ` · <b>${g.n - g.done} nyitott</b>` : ''}</small></h3><div class="grp-b">${body}</div></section>`;
+  const wkHTML = w => {
+    const g = sum(w.days), key = 'w:' + w.k, hasEdit = w.days.some(d => d.ds === editDay);
+    const open = forced || hasEdit || (ui.groupState.has(key) ? ui.groupState.get(key) : w.k === curW || g.n > g.done);   // alapból nyitva: a jelenlegi hét és minden hét, amelyikben van megoldatlan feladat
+    return grp('wk', key, weekLabel(w.k), w.k === curW ? ' · e hét' : '', g, open, w.days.map(d => dayHTML(d.ds, d.ts)).join(''));
+  };
+  let html = '';
+  for (let i = 0; i < weeks.length;) {
+    const mk = weeks[i].k.slice(0, 7); let j = i; while (j < weeks.length && weeks[j].k.slice(0, 7) === mk) j++;
+    const ws = weeks.slice(i, j);
+    if (mk === curM) html += ws.map(wkHTML).join('');                   // a jelenlegi hónapnak nincs külön fejléce
+    else {
+      const g = sum(ws.flatMap(w => w.days)), key = 'm:' + mk, hasEdit = ws.some(w => w.days.some(d => d.ds === editDay));
+      html += grp('mo', key, monthLabel(mk), '', g, forced || hasEdit || (ui.groupState.has(key) ? ui.groupState.get(key) : g.n > g.done), ws.map(wkHTML).join(''));
     }
-    html += taskRows(t, terms, now, wm, cm);
+    i = j;
   }
-  list.innerHTML = html + '</ul></section>';
+  list.innerHTML = html;
 }
+
+// egy nap megnyitása: a napot és a hetét / hónapját is (ugrás, villantás, kipipálás után)
+export function revealDay(ds){ ui.dayState.set(ds, true); for (const k of groupKeys(ds)) ui.groupState.set(k, true); }

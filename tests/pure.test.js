@@ -1,6 +1,6 @@
 // A DOM-mentes modulok (src/util, tasks, csv, people-model, stats) tesztje Node-ban
 import assert from 'node:assert';
-import { normDate, normStamp, normDeadline, fold, weekDays, monthDays, isoWeek, fmtLeft, fmtAgo, fmtDur, toMs, dstr } from '../src/util.js';
+import { groupKeys, weekKeyOf, weekLabel, monthLabel, normDate, normStamp, normDeadline, fold, weekDays, monthDays, isoWeek, fmtLeft, fmtAgo, fmtDur, toMs, dstr } from '../src/util.js';
 import { mergeInto, extractTags, cimkeToTags, dueInfo, HEADER, cmpTasks, isParked, cmpParked } from '../src/tasks.js';
 import { detectDelimiter, parseCSV, rowsToTasks, toCSV } from '../src/csv.js';
 import { pkey, normName, parsePeople, peopleToCSV, seedPeople, reconcilePeople, mergePeopleInto, lev, suggestPeople, exactPerson } from '../src/people-model.js';
@@ -348,3 +348,10 @@ console.log('Minden pure teszt rendben ✔');
   assert.deepStrictEqual(jd.map(x => x.text.split(':')[0]), ['Létrehozva', 'Szünet oka', 'Megjegyzés']);
 }
 console.log('Előzmény pure tesztek ✔');
+
+// lista csoportkulcsok: hét = hétfői dátum, hónap = a hét hétfőjének hónapja
+assert.strictEqual(weekKeyOf('2026-11-09'), '2026-11-09'); assert.strictEqual(weekKeyOf('2026-11-15'), '2026-11-09', 'vasárnap még az előző hétfő hetében');
+assert.deepStrictEqual(groupKeys('2026-11-01'), ['w:2026-10-26', 'm:2026-10'], 'hónaphatáron átnyúló hét a hétfő hónapjába tartozik');
+assert.strictEqual(weekLabel('2026-11-09'), 'nov. 9–15.'); assert.strictEqual(weekLabel('2026-10-26'), 'okt. 26. – nov. 1.');
+assert.strictEqual(monthLabel('2026-10'), '2026. október');
+console.log('Csoportkulcs pure tesztek ✔');

@@ -69,6 +69,17 @@ export function monthDays(offset = 0, now = new Date()){
   return { first, days: Array.from({length:n}, (_,i) => dstr(new Date(first.getFullYear(), first.getMonth(), i+1))) };
 }
 
+// hétfői dátum (a hét azonosítója) és a lista csoportkulcsai: 'w:<hétfő>' (hét), 'm:<hétfő hónapja>' (hónap)
+export const weekKeyOf = ds => { const [y, m, d] = ds.split('-').map(Number); return weekDays(0, new Date(y, m - 1, d))[0]; };
+export const groupKeys = ds => { const w = weekKeyOf(ds); return ['w:' + w, 'm:' + w.slice(0, 7)]; };
+const MONF = ['január','február','március','április','május','június','július','augusztus','szeptember','október','november','december'];
+export const monthLabel = key => { const [y, m] = key.split('-').map(Number); return `${y}. ${MONF[m - 1]}`; };
+// „nov. 16–22." / „okt. 26. – nov. 1."
+export function weekLabel(mon){
+  const [y, m, d] = mon.split('-').map(Number), a = new Date(y, m - 1, d), b = new Date(y, m - 1, d + 6);
+  return a.getMonth() === b.getMonth() ? `${MON[a.getMonth()]} ${a.getDate()}–${b.getDate()}.` : `${MON[a.getMonth()]} ${a.getDate()}. – ${MON[b.getMonth()]} ${b.getDate()}.`;
+}
+
 export function isoWeek(d){
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
   return Math.ceil(((t - Date.UTC(t.getUTCFullYear(),0,1)) / 86400000 + 1) / 7);

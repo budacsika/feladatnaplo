@@ -721,6 +721,59 @@ tmw95vmnn709k;2026.11.09;Admin felhasználót létre kell hozni magamnak.;nyitot
   assert.strictEqual(await page.$eval(`#list [data-id="${idK}"] .cmt`, e => getComputedStyle(e).display).catch(() => 'none'), 'none', 'kész feladaton a komment nem látszik a sorban');
   assert.strictEqual(await page.evaluate(() => document.querySelectorAll('#list .task.editing').length), 0);
 
+  // 19) hónap › hét › nap csoportok a listában + adatgyűjtés hőtérkép-sáv
+  await page.$eval('#fDate', e => { e.value = '2026-10-14'; e.dispatchEvent(new Event('change')); });
+  await page.type('#fText', 'Októberi feladat'); await page.click('#addForm .primary');
+  await page.waitForFunction(() => document.body.innerText.includes('Októberi feladat'));
+  await page.evaluate(() => [...document.querySelectorAll('#list .task')].find(r => r.textContent.includes('Októberi feladat')).querySelector('[data-act="toggle"]').click());
+  await sleep(900); await page.reload(); await page.waitForSelector('#list .task'); await sleep(500);
+  const cls = sel => page.$eval(sel, e => e.className);
+  const octDay = '#list .dtoggle[data-day="2026-10-14"]', novDay = '#list .dtoggle[data-day="2026-11-09"]';
+  const up = (sel, anc) => page.$eval(sel, (e, a) => { const x = e.closest(a); return x ? { cls: x.className, head: x.querySelector(':scope > h3') ? x.querySelector(':scope > h3').textContent : '' } : null; }, anc);
+  let mo = await up(octDay, '.grp.mo'), wkO = await up(octDay, '.grp.wk');
+  assert(mo && /collapsed/.test(mo.cls) && mo.head.includes('2026. október') && mo.head.includes('1/1 kész'), 'az október hónap fejléce zárt és összesít: ' + JSON.stringify(mo));
+  assert(wkO && /collapsed/.test(wkO.cls) && wkO.head.includes('okt. 12–18.'), 'a hét fejléce zárt: ' + JSON.stringify(wkO));
+  const nowWk = await up(novDay, '.grp.wk');
+  assert(!/collapsed/.test(nowWk.cls) && nowWk.head.includes('e hét') && nowWk.head.includes('nov. 9–15.'), 'a jelenlegi hét nyitva: ' + JSON.stringify(nowWk));
+  assert.strictEqual(await up(novDay, '.grp.mo'), null, 'a jelenlegi hónapnak nincs külön fejléce');
+  assert.strictEqual(await page.$eval(octDay, e => getComputedStyle(e.closest('.day')).display === 'none' || e.offsetParent === null), true, 'zárt hónapban a nap nem látszik');
+  // kinyitás: hónap → hét → nap
+  await page.click('#list .grp.mo > h3 .gtoggle'); mo = await up(octDay, '.grp.mo');
+  assert(!/collapsed/.test(mo.cls) && /collapsed/.test((await up(octDay, '.grp.wk')).cls), 'a hónap nyitva, a hét még zárt');
+  await page.click('#list .grp.mo .grp.wk > h3 .gtoggle'); assert(!/collapsed/.test((await up(octDay, '.grp.wk')).cls), 'a hét is nyitva');
+  assert(/collapsed/.test(await cls(`.day:has(${octDay.replace('#list ', '')})`)), 'a csupa kész nap alapból zárt maradt');
+  await page.click(octDay); assert(!/collapsed/.test(await cls(`.day:has(${octDay.replace('#list ', '')})`)), 'a nap kinyílik');
+  // alapnézet / mind kinyit
+  await page.click('#daysToday'); assert(/collapsed/.test((await up(octDay, '.grp.mo')).cls), 'alapnézet: a csupa kész hónap újra zárt');
+  await page.click('#daysAll'); assert.strictEqual(await page.$$eval('#list .grp.collapsed, #list .day.collapsed', e => e.length), 0, 'mind kinyit: hónap, hét, nap is');
+  await page.click('#daysToday');
+  // keresés kinyitja a találatot, törlés után visszaáll
+  await page.type('#q', 'Októberi'); assert(!/collapsed/.test((await up(octDay, '.grp.mo')).cls) && !/collapsed/.test((await up(octDay, '.grp.wk')).cls), 'keresés kinyitja a hónapot és a hetet');
+  await page.$eval('#q', e => { e.value = ''; e.dispatchEvent(new Event('input', { bubbles: true })); }); await sleep(200);
+  assert(/collapsed/.test((await up(octDay, '.grp.mo')).cls), 'keresés törlése után a hónap újra zárt');
+  // hőtérkép
+  assert.strictEqual(await page.$eval('#heat', e => e.hidden), false, 'a hőtérkép látszik');
+  const firstDay = await page.$$eval('#heat [data-day]', bs => bs.map(b => b.dataset.day).sort()[0]);
+  assert(firstDay <= '2026-10-14', 'a hőtérkép a legkorábbi naptól indul: ' + firstDay);
+  const hsum = await page.$eval('#heatSum', e => e.textContent);
+  assert(hsum.startsWith(firstDay.replace(/-/g, '.') + '. óta') && /\d+ nap · \d+ munkanap · \d+ feladat/.test(hsum), 'összegző sor: ' + hsum);
+  assert.strictEqual(await page.$$eval('#heatBody .hm-grid .hm-c.td', e => e.length), 1, 'a mai nap jelölt');
+  const tip = await page.$eval('#heat [data-day="2026-10-14"]', e => e.title);
+  assert(tip.includes('okt. 14.') && tip.includes('1 feladat, mind kész'), 'a négyzet súgója: ' + tip);
+  assert.strictEqual(await page.$eval('#heat [data-day="2026-10-14"]', e => e.tabIndex), -1, 'a négyzetek nem szaporítják a Tab-megállókat');
+  // kattintás: a lista a naphoz ugrik és kinyitja a hónapját / hetét
+  await page.click('#heat [data-day="2026-10-14"]'); await sleep(500);
+  assert(!/collapsed/.test((await up(octDay, '.grp.mo')).cls) && !/collapsed/.test((await up(octDay, '.grp.wk')).cls) && !/collapsed/.test(await cls(`.day:has(${octDay.replace('#list ', '')})`)), 'a hőtérkép-kattintás kinyitja a napot, a hetét és a hónapját');
+  assert.strictEqual(await page.$eval(octDay, e => { const r = e.getBoundingClientRect(); return r.top >= -2 && r.top < innerHeight; }), true, 'a nap a képernyőn van');
+  await (await page.$('#heat')).screenshot({ path: path.resolve(OUT, 'shot-heat.png') });
+  await page.click('#daysToday'); await sleep(200);
+  await (await page.$('#list')).screenshot({ path: path.resolve(OUT, 'shot-groups.png') });
+  // keskeny képernyő: nincs vízszintes túlcsúszás, a sáv saját görgetésű
+  await page.setViewport({ width: 390, height: 844, deviceScaleFactor: 2 }); await sleep(300);
+  assert.strictEqual(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, '390px: nincs oldalirányú túlcsúszás');
+  await (await page.$('#heat')).screenshot({ path: path.resolve(OUT, 'shot-heat-390.png') });
+  await page.setViewport({ width: 1280, height: 1000 });
+
   assert.deepStrictEqual(errors, [], 'nincs JS hiba: ' + errors.join(' | '));
   console.log('UI teszt rendben ✔');
   await browser.close();

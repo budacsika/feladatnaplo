@@ -5,12 +5,13 @@ import { tick } from './clock.js';
 import { toCSV } from './csv.js';
 import { renderDash } from './dash.js';
 import { matches, matchesText, queryTerms } from './filter.js';
-import { renderList } from './list.js';
+import { renderList, revealDay } from './list.js';
 import { moveFromPark, sendToPark, setPark, setParkOpen } from './park.js';
 import { addPerson, removePerson, renamePerson, renderPeople } from './people.js';
 import { exactPerson, normName, pkey, reconcilePeople, suggestPeople } from './people-model.js';
 import { setJournal, setJournalDay, shiftJournal } from './journal.js';
 import { addComment } from './notes.js';
+import { groupKeys } from './util.js';
 import { finishActive, pauseActive, resolveGap, startWorkOn } from './work.js';
 import { flash, render } from './render.js';
 import { $, LS_DASH, LS_PARK, LS_PPL, isDone, live, ov, st, ui } from './state.js';
@@ -112,6 +113,7 @@ list.addEventListener('click', e => {
     case 'notex': ui.noteOpen = null; ui.noteDraft = ''; renderList(); break;
     case 'hist': ui.histOpen.has(id) ? ui.histOpen.delete(id) : ui.histOpen.add(id); renderList(); break;
     case 'cancel': st.editing = null; renderList(); break;
+    case 'grp': ui.groupState.set(b.dataset.g, b.getAttribute('aria-expanded') !== 'true'); renderList(); break;
     case 'day': { const ds = b.dataset.day; ui.dayState.set(ds, b.getAttribute('aria-expanded') !== 'true'); renderList(); break; }
     case 'del': deleteTask(id); break;
     case 'topark': sendToPark(id); break;
@@ -145,8 +147,17 @@ list.addEventListener('keydown', e => {
   else if (e.key === 'Enter' && !e.shiftKey && e.target.tagName === 'TEXTAREA') { e.preventDefault(); e.target.form.requestSubmit(); }
 });
 }
-$('#daysAll').addEventListener('click', () => { st.tasks.forEach(t => { if (!isParked(t)) ui.dayState.set(t.datum, true); }); renderList(); });
-$('#daysToday').addEventListener('click', () => { ui.dayState.clear(); renderList(); });
+$('#daysAll').addEventListener('click', () => { st.tasks.forEach(t => { if (!isParked(t)) { ui.dayState.set(t.datum, true); for (const k of groupKeys(t.datum)) ui.groupState.set(k, true); } }); renderList(); });
+$('#daysToday').addEventListener('click', () => { ui.dayState.clear(); ui.groupState.clear(); renderList(); });
+$('#heat').addEventListener('click', e => {         // hőtérkép: ugrás az adott naphoz (megnyitja a hetét / hónapját is)
+  const b = e.target.closest('[data-day]'); if (!b) return;
+  const ds = b.dataset.day, find = () => document.querySelector(`#list .dtoggle[data-day="${ds}"]`);
+  st.editing = null; revealDay(ds); renderList();
+  if (!find()) { resetFilters(); renderList(); }
+  const h = find(); if (!h) return;
+  h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const sec = h.closest('.day'); sec.classList.add('jump'); setTimeout(() => sec.classList.remove('jump'), 1600);
+});
 $('#parkToggle').addEventListener('click', () => setParkOpen(!ov.park));
 $('#btnJournal').addEventListener('click', () => setJournal(!ov.journal));
 $('#journalClose').addEventListener('click', () => setJournal(false));

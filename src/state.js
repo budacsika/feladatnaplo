@@ -13,7 +13,7 @@ export const st = { tasks:[], deleted:new Set(), mode:'none', dir:null, fh:null,
   hist:[], fhH:null, lastModH:0, dirtyH:false,   // hist: előzmény-események (tortenet.csv)
   sessions:[], fhS:null, lastModS:0, dirtyS:false, sessBlocked:false };   // sessions: munkamenetek (munkamenetek.csv); sessBlocked: ismeretlen formátumú fájl, nem írjuk felül
 
-export const ui = { search:'', status:'all', period:'all', dayState:new Map(), histOpen:new Set(), noteOpen:null, noteDraft:'' };   // dayState: nap → kézzel nyitott/zárt; alapból csak a mai nap nyitott
+export const ui = { search:'', status:'all', period:'all', dayState:new Map(), groupState:new Map(), histOpen:new Set(), noteOpen:null, noteDraft:'' };   // dayState: nap → kézzel nyitott/zárt; alapból csak a mai nap nyitott
 
 export const ov = { w:0, m:0, tm: (() => { try { const v = localStorage.getItem(LS_TM); return v === 'w' || v === 'all' ? v : 'm'; } catch { return 'm'; } })(), tmo:0, park: (() => { try { return localStorage.getItem(LS_PARK) !== '0'; } catch { return true; } })(), people: (() => { try { return localStorage.getItem(LS_PPL) === '1'; } catch { return false; } })(), pPeriod:'all', pEdit:null, journal: (() => { try { return localStorage.getItem(LS_JRN) === '1'; } catch { return false; } })(), jDay:'', hidden: (() => { try { return localStorage.getItem(LS_DASH) === '0'; } catch { return false; } })() };
 

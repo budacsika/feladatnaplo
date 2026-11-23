@@ -382,6 +382,39 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
 .jl li.gone .jx{color:var(--dim);text-decoration:line-through}
 @media (max-width:620px){ .jl li{grid-template-columns:44px minmax(0,1fr)} .jl .jx{grid-column:2} .hist li{grid-template-columns:90px minmax(0,1fr)} }
 
+/* hónap › hét csoportok a listában */
+.grp{margin-bottom:12px}
+.grp>h3{display:flex;align-items:baseline;gap:10px;margin:0 0 6px;padding:7px 2px 5px;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line)}
+.grp.mo>h3{font-size:12px;color:var(--ink);border-bottom-color:var(--line2)}
+.grp>h3 small{font:400 10.5px var(--mono);letter-spacing:.05em;color:var(--dim);text-transform:none}
+.grp>h3 small b{font-weight:600;color:var(--gold)}
+.grp.collapsed>h3{margin-bottom:0;opacity:.9}
+.grp.collapsed>h3 .chev{transform:rotate(-90deg)}
+.grp.collapsed>.grp-b{display:none}
+.grp.mo>.grp-b{padding-left:12px;border-left:1px solid var(--line)}
+.day.jump>h2{color:var(--cyan)}
+/* adatgyűjtés hőtérkép-sáv */
+.heat{margin:0 0 14px;padding:9px 14px 8px}
+.heat[hidden]{display:none}
+.heat .ph{margin-bottom:6px;flex-wrap:wrap}
+.hm-scroll{overflow-x:auto;padding-bottom:2px}
+.hm-grid{display:flex;gap:3px;width:max-content}
+.hm-lab,.hm-col{display:grid;grid-template-rows:14px repeat(7,13px);gap:3px}
+.hm-lab{font-size:10.5px;color:var(--muted);margin-right:3px;line-height:13px}
+.hm-mo{font-size:10.5px;color:var(--muted);white-space:nowrap;line-height:14px;overflow:visible}
+.hm-c{display:block;width:13px;height:13px;padding:0;border:0;border-radius:2px;position:relative;background:#0d1f2c}
+.hm-c.none{background:transparent}
+.hm-c.we{background:#0a1822}
+.hm-c.l1{background:#12506a} .hm-c.l2{background:#1b86a8} .hm-c.l3{background:#27b6d9} .hm-c.l4{background:#35e0ff}
+button.hm-c{cursor:pointer}
+button.hm-c:hover{outline:1px solid var(--ink)}
+.hm-c.td{outline:2px solid var(--gold);outline-offset:1px}
+.hm-c.op::after{content:"";position:absolute;left:4px;top:4px;width:5px;height:5px;border-radius:50%;background:var(--gold)}
+.hm-leg{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;margin-top:6px;font-size:10.5px;color:var(--muted)}
+.hm-leg i.hm-c{display:inline-block;width:11px;height:11px;vertical-align:-1px;margin-right:4px}
+.hm-leg i.hm-c.td{outline-offset:-1px}
+.hm-leg i.hm-c.op::after{left:3px;top:3px}
+
 /* megjegyzések */
 .cmt{display:block;margin-top:3px;font-size:12px;color:var(--gold);opacity:.9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .task.done .cmt{display:none}
@@ -456,13 +489,14 @@ mark{background:rgba(255,194,51,.35);color:#fff;border-radius:2px;padding:0 1px}
   @page{margin:13mm}
   html{color-scheme:light}
   body{background:#fff!important;color:#111;font-size:10.5pt}
-  body::before,.top,.cmd,#today,#park,#journal,.hist,.go-b,#overview,.dash,.dash-bar,.people,.ac,.filters,.foot,.icon,#toast,.meta{display:none!important}
+  body::before,.top,.cmd,#today,#park,#journal,.hist,.go-b,#overview,#heat,.dash,.dash-bar,.people,.ac,.filters,.foot,.icon,#toast,.meta{display:none!important}
   .print-head{display:block;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #111}
   .print-head h1{font-size:16pt;letter-spacing:.1em;text-shadow:none;color:#111}
   .print-head .pm{font:9pt var(--mono);color:#333;margin-top:2px}
   .wrap{max-width:none;padding:0}
   .day ul{background:#fff;border:1px solid #999}
-  .day.collapsed ul{display:block!important} .dtoggle .chev{display:none}
+  .day.collapsed ul{display:block!important} .grp.collapsed>.grp-b{display:block!important} .dtoggle .chev{display:none}
+  .grp>h3{color:#111!important;border-bottom:1px solid #999} .grp.mo>.grp-b{border-left:0;padding-left:0} .grp>h3 small{color:#444}
   .day h2{position:static;background:none;color:#111!important;text-shadow:none!important;border-bottom:1px solid #111}
   .day h2 small{color:#444}
   .task{border-top:1px solid #ccc;box-shadow:none!important;background:none!important;break-inside:avoid;animation:none!important}
